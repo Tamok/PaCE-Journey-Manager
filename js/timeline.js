@@ -2,8 +2,7 @@
  * timeline.js
  *
  * Renders the timeline for top-level journeys with drag-and-drop reordering.
- * Each timeline circle now shows only the month/year (formatted with weekday on hover),
- * along with the journey title.
+ * Each timeline circle shows only the month and year (with a tooltip showing full date).
  *
  * Author: Your Name
  * Date: YYYY-MM-DD
@@ -15,8 +14,8 @@ import { scheduleJourneys } from "./scheduler.js";
 /**
  * Renders the timeline.
  * @param {Array} journeyData - Array of journey objects.
- * @param {HTMLElement} timelineContainer - DOM element for timeline.
- * @param {Function} renderDetailsCallback - Callback to render details.
+ * @param {HTMLElement} timelineContainer - The timeline container.
+ * @param {Function} renderDetailsCallback - Callback to render journey details.
  */
 export function renderTimeline(journeyData, timelineContainer, renderDetailsCallback) {
   scheduleJourneys(journeyData);
@@ -26,28 +25,23 @@ export function renderTimeline(journeyData, timelineContainer, renderDetailsCall
     const item = document.createElement("div");
     item.classList.add("timeline-item");
     if (j.completedDate) item.classList.add("completed");
-    // Apply priority class.
     if (j.priority === "Critical") item.classList.add("critical");
     else if (j.priority === "Important") item.classList.add("important");
     else if (j.priority === "Next") item.classList.add("next");
     else if (j.priority === "Sometime Maybe") item.classList.add("maybe");
-
     item.setAttribute("draggable", "true");
-
-    // Only display month/year.
-    const startStr = j.startDate ? new Date(j.startDate).toLocaleDateString("en-US", { month:"short", year:"numeric" }) : "";
-    // On hover, show weekday as well.
-    const hoverStr = j.startDate ? new Date(j.startDate).toLocaleDateString("en-US", { weekday:"short", month:"short", year:"numeric" }) : "";
+    const startDate = j.startDate ? new Date(j.startDate) : null;
+    const startStr = startDate ? startDate.toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "";
+    const fullDate = startDate ? startDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) : "";
     item.innerHTML = `
       <strong>${j.title}</strong>
-      <span style="font-size:0.85rem;" title="${hoverStr}">${startStr}</span>
+      <span style="font-size:0.85rem;" title="${fullDate}">${startStr}</span>
     `;
     item.addEventListener("click", () => {
       document.querySelectorAll(".timeline-item").forEach(el => el.classList.remove("active"));
       item.classList.add("active");
       renderDetailsCallback(index);
     });
-    // Drag-and-drop events.
     item.addEventListener("dragstart", (e) => {
       timelineContainer.dragSrcEl = item;
       e.dataTransfer.effectAllowed = "move";

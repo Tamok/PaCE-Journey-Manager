@@ -2,8 +2,8 @@
  * app.js
  *
  * Main entry point for PaCE Journey Manager.
- * Loads data from Firestore (or default data), schedules journeys,
- * renders the timeline and detailed view, and enables configuration save/download.
+ * Loads journey data from Firestore (or default data), schedules journeys,
+ * renders the timeline and detailed view, and enables configuration save/download/upload.
  *
  * Author: Your Name
  * Date: YYYY-MM-DD
@@ -24,6 +24,7 @@ const addJourneyBtn = document.getElementById("add-journey-btn");
 const addJourneyForm = document.getElementById("add-journey-form");
 const saveConfigBtn = document.getElementById("save-config-btn");
 const downloadConfigBtn = document.getElementById("download-config-btn");
+const uploadConfigBtn = document.getElementById("upload-config-btn");
 
 let journeyData = [];
 
@@ -46,7 +47,7 @@ function renderAppTimeline() {
 }
 
 /**
- * Loads journey data from Firestore; resets to default if none exists.
+ * Loads journey data from Firestore; resets to default if empty.
  */
 async function loadJourneyData() {
   try {
@@ -142,7 +143,6 @@ if (addJourneyBtn && addJourneyForm) {
     journeyData.push(newJourney);
     console.log(`Added new journey: "${title}".`);
     await saveJourneyData();
-    // Clear form fields.
     document.getElementById("new-journey-title").value = "";
     document.getElementById("new-journey-number").value = "";
     document.getElementById("new-journey-note").value = "";
@@ -157,7 +157,6 @@ if (addJourneyBtn && addJourneyForm) {
 
 /**
  * Save Configuration button handler.
- * Manually triggers saving to Firestore.
  */
 if (saveConfigBtn) {
   saveConfigBtn.addEventListener("click", async () => {
@@ -168,7 +167,6 @@ if (saveConfigBtn) {
 
 /**
  * Download Configuration button handler.
- * Downloads journeyData as a JSON file.
  */
 if (downloadConfigBtn) {
   downloadConfigBtn.addEventListener("click", () => {
@@ -177,6 +175,33 @@ if (downloadConfigBtn) {
     dlAnchor.setAttribute("href", dataStr);
     dlAnchor.setAttribute("download", "journey_configuration.json");
     dlAnchor.click();
+  });
+}
+
+/**
+ * Upload Configuration handler.
+ */
+if (uploadConfigBtn) {
+  uploadConfigBtn.addEventListener("click", () => {
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "application/json";
+    fileInput.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      try {
+        const importedData = JSON.parse(text);
+        journeyData = importedData;
+        await saveJourneyData();
+        renderAppTimeline();
+        alert("Configuration uploaded successfully.");
+      } catch (error) {
+        console.error("Error parsing uploaded configuration:", error);
+        alert("Invalid configuration file.");
+      }
+    };
+    fileInput.click();
   });
 }
 

@@ -1,17 +1,21 @@
 /**
  * gantt.js
  *
- * Renders the Gantt chart for a journey and binds events for approval checkboxes.
- * Non-approval tasks (i.e. creative tasks) are recalculated based on the journey's difficulty.
- * Dependencies are highlighted on hover.
+ * Renders the Gantt chart for a journey and binds approval checkbox events.
+ * Non-approval tasks are scaled based on difficulty.
+ * Holidays are marked in the chart:
+ * - If an entire week is off, the cell gets a "gantt-holiday-full" class.
+ * - If only part of a week is holiday, a marker with a tooltip is added.
  *
  * Author: Your Name
  * Date: YYYY-MM-DD
  */
 
+import { addDays, toYMD, HOLIDAYS } from "./scheduler.js";
+
 /* Base Task Rows Definition */
 const baseTaskRows = [
-  // Non-approval tasks (their durations will be scaled)
+  // Non-approval tasks (durations will be scaled)
   {
     name: "Diagram Building",
     startWeek: 1,
@@ -40,7 +44,7 @@ const baseTaskRows = [
     dependencies: ["Creative Development"],
     isApproval: false
   },
-  // Approval tasks (fixed at 2 weeks, constant order)
+  // Approval tasks (fixed at 2 weeks)
   {
     name: "PM Approval",
     startWeek: 2,
@@ -109,26 +113,22 @@ const baseTaskRows = [
 ];
 
 /**
- * Adapts the base task rows for a given journey.
- * Approval tasks remain fixed (2 weeks). Non-approval tasks are scaled.
- * Scaling factor is (totalWeeks / 4), where totalWeeks is based on difficulty:
- *   Easy = 4, Medium = 6, Hard = 8.
- * @param {Object} journey - The journey object.
- * @returns {Array} Task rows for the journey.
+ * Adapts base task rows for a journey.
+ * Non-approval tasks are scaled by the factor (totalWeeks/4) using Math.ceil.
+ * @param {Object} journey - The journey.
+ * @returns {Array} Task rows.
  */
 function getTaskRowsForJourney(journey) {
   if (journey.taskRows) return journey.taskRows;
-
   const cloned = JSON.parse(JSON.stringify(baseTaskRows));
   let totalWeeks = 4;
   if (journey.difficulty === "Medium") totalWeeks = 6;
   else if (journey.difficulty === "Hard") totalWeeks = 8;
   const factor = totalWeeks / 4;
-
   cloned.forEach(task => {
     if (!task.isApproval) {
-      task.startWeek = Math.max(1, Math.round(task.startWeek * factor));
-      task.endWeek = Math.max(task.startWeek, Math.round(task.endWeek * factor));
+      task.startWeek = Math.ceil(task.startWeek * factor);
+      task.endWeek = Math.ceil(task.endWeek * factor);
     }
   });
   journey.taskRows = cloned;
@@ -137,8 +137,11 @@ function getTaskRowsForJourney(journey) {
 
 /**
  * Renders the Gantt chart for a journey.
- * @param {Object} journey - The journey object.
- * @returns {string} HTML string of the Gantt chart.
+ * Also marks holidays:
+ * - If an entire week is holidays, the cell gets class "gantt-holiday-full".
+ * - If only part of the week, a marker with tooltip is added.
+ * @param {Object} journey - The journey.
+ * @returns {string} HTML string.
  */
 export function renderGantt(journey) {
   let totalWeeks = 4;
@@ -156,9 +159,7 @@ export function renderGantt(journey) {
   const rows = getTaskRowsForJourney(journey);
   rows.forEach((row, rowIndex) => {
     html += `<tr class="gantt-row" data-index="${rowIndex}">`;
-    html += `<td class="task-row-name" 
-              onmouseenter="this.parentElement.classList.add('dependency-highlight')" 
-              onmouseleave="this.parentElement.classList.remove('dependency-highlight')">`;
+    html += `<td class="task-row-name" onmouseenter="this.parentElement.classList.add('dependency-highlight')" onmouseleave="this.parentElement.classList.remove('dependency-highlight')">`;
     if (row.isApproval) {
       html += `<label>
         <input type="checkbox" class="approval-checkbox" data-task-index="${rowIndex}" ${row.approvedOn ? "checked disabled" : ""} />
@@ -177,30 +178,44 @@ export function renderGantt(journey) {
     }
     html += `</td>`;
     for (let w = 1; w <= totalWeeks; w++) {
-      if (w >= row.startWeek && w <= row.endWeek) {
-        let cellClass = "gantt-active";
-        if (journey.startDate) {
-          const oneWeekMs = 7 * 24 * 3600 * 1000;
-          const today = new Date();
-          const weekIndex = Math.floor((today - new Date(journey.startDate)) / oneWeekMs) + 1;
-          if (weekIndex === w) cellClass += " gantt-current";
-        }
-        html += `<td class="${cellClass}"></td>`;
-      } else {
-        html += `<td></td>`;
+      let cellClass = "";
+      // Determine if this cell falls within the task's scheduled weeks.
+      if (w >= row.startWeek && w <= row.endWeek) cellClass = "gantt-active";
+      // Calculate the start and end date for the week.
+      let weekStart = addDays(new Date(journey.startDate), (w - 1) * 7);
+      let weekEnd = addDays(weekStart, 6);
+      // Check holidays in this week.
+      let holidaysThisWeek = HOLIDAYS.filter(h => {
+        let hDate = new Date(h);
+        return hDate >= weekStart && hDate <= weekEnd;
+      });
+      if (holidaysThisWeek.length === 7) {
+        cellClass = "gantt-holiday-full";
+      } else if (holidaysThisWeek.length > 0) {
+        cellClass += " gantt-holiday";
+        // Add tooltip for partial holiday.
+        let tooltip = "Holidays: " + holidaysThisWeek.join(", ");
+        cellClass += `" title="${tooltip}`;
       }
+      // Mark current week.
+      if (journey.startDate) {
+        const oneWeekMs = 7 * 24 * 3600 * 1000;
+        const today = new Date();
+        const weekIndex = Math.floor((today - new Date(journey.startDate)) / oneWeekMs) + 1;
+        if (weekIndex === w) cellClass += " gantt-current";
+      }
+      html += `<td class="${cellClass}"></td>`;
     }
     html += `</tr>`;
   });
   html += `</tbody></table></div>`;
-  console.log(`Rendered Gantt chart for "${journey.title}" (${totalWeeks} weeks).`);
+  console.log(`Rendered Gantt chart for "${journey.title}" with ${totalWeeks} weeks.`);
   return html;
 }
 
 /**
- * Binds event listeners to approval checkboxes in the rendered Gantt chart.
- * When checked, stamps the task with the current timestamp and disables the checkbox.
- * @param {Object} journey - The journey object.
+ * Binds approval checkbox events in the Gantt chart.
+ * @param {Object} journey - The journey.
  */
 export function bindApprovalCheckboxes(journey) {
   const container = document.querySelector(".gantt-container");
@@ -218,8 +233,7 @@ export function bindApprovalCheckboxes(journey) {
         if (rows && rows[taskIndex]) {
           rows[taskIndex].approvedOn = nowStr;
         }
-        const timeSpan = checkbox.parentElement.nextElementSibling ||
-                         checkbox.parentElement.querySelector(".approval-timestamp");
+        const timeSpan = checkbox.parentElement.nextElementSibling || checkbox.parentElement.querySelector(".approval-timestamp");
         if (timeSpan) {
           timeSpan.textContent = `Approved on ${nowStr}`;
           timeSpan.classList.add("completed");

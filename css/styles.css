@@ -25,10 +25,11 @@ body {
   --important-color: #febc11;   /* UCSB Gold */
   --next-color: #1178b5;        /* PaCE Secondary */
   --maybe-color: #999;          /* Sometime Maybe */
-  --child-critical: #00294d;
-  --child-important: #b8860b;
-  --child-next: #0a5c8a;
-  --child-maybe: #666;
+  /* For subjourneys, use lower opacity fill */
+  --critical-fill: rgba(0,54,96,0.2);
+  --important-fill: rgba(254,188,17,0.2);
+  --next-fill: rgba(17,120,181,0.2);
+  --maybe-fill: rgba(153,153,153,0.2);
   --light-gray: #f0f0f0;
   --border-gray: #ddd;
 }
@@ -104,7 +105,7 @@ select {
   margin-bottom: 30px;
   overflow-x: auto;
   overflow-y: visible;
-  padding-bottom: 20px;
+  padding: 20px 20px; /* extra horizontal padding */
 }
 .horizontal-scroll::-webkit-scrollbar {
   height: 8px;
@@ -130,22 +131,25 @@ select {
   text-align: center;
   cursor: move;
   user-select: none;
-  /* Remove extra padding to center text */
-  padding: 0;
-  border: 3px solid var(--critical-color);
+  border: 3px solid;
+  /* Border color set per priority */
   background: #fff;
   color: #333;
   transition: transform 0.3s ease, background 0.3s ease;
+  position: relative;
+}
+.timeline-item.drop-target {
+  border: 3px dashed var(--important-color);
 }
 .timeline-item:hover {
   transform: scale(1.1);
   background: var(--light-gray);
 }
-/* Active state: background set to border color */
-.timeline-item.critical.active { background: var(--critical-color); color: #fff; }
-.timeline-item.important.active { background: var(--important-color); color: #fff; }
-.timeline-item.next.active { background: var(--next-color); color: #fff; }
-.timeline-item.maybe.active { background: var(--maybe-color); color: #fff; }
+/* Active state: use low-opacity fill corresponding to priority */
+.timeline-item.critical.active { background: var(--critical-fill); color: var(--critical-color); }
+.timeline-item.important.active { background: var(--important-fill); color: var(--important-color); }
+.timeline-item.next.active { background: var(--next-fill); color: var(--next-color); }
+.timeline-item.maybe.active { background: var(--maybe-fill); color: var(--maybe-color); }
 .timeline-item.completed {
   border-color: #999;
   background: #ccc;
@@ -174,10 +178,10 @@ select {
   padding-left: 8px;
   margin-bottom: 8px;
 }
-.subjourney-item.sub-critical { border-color: var(--child-critical); }
-.subjourney-item.sub-important { border-color: var(--child-important); }
-.subjourney-item.sub-next { border-color: var(--child-next); }
-.subjourney-item.sub-maybe { border-color: var(--child-maybe); }
+.subjourney-item.sub-critical { border-color: var(--critical-color); }
+.subjourney-item.sub-important { border-color: var(--important-color); }
+.subjourney-item.sub-next { border-color: var(--next-color); }
+.subjourney-item.sub-sometime { border-color: var(--maybe-color); }
 
 /* Details Container */
 #details-container {
@@ -187,6 +191,7 @@ select {
   padding: 20px;
   margin-bottom: 30px;
   min-height: 220px;
+  position: relative;
 }
 .journey-title {
   display: flex;
@@ -209,6 +214,16 @@ select {
   border: 1px solid #ccc;
   padding: 10px;
 }
+.gantt-container::-webkit-scrollbar {
+  height: 8px;
+}
+.gantt-container::-webkit-scrollbar-track {
+  background: #fff;
+}
+.gantt-container::-webkit-scrollbar-thumb {
+  background-color: var(--critical-color);
+  border-radius: 4px;
+}
 .gantt-table {
   border-collapse: collapse;
   font-size: 0.85rem;
@@ -225,6 +240,7 @@ select {
 .gantt-active { background: #8bd0ff; }
 .gantt-holiday { background: #ffb5b5; cursor: help; }
 .gantt-current { outline: 2px solid red; }
+.gantt-holiday-full { background: #ffb5b5; }
 
 /* Dependency highlight on hover */
 .dependency-highlight {
