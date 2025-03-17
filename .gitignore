@@ -4,6 +4,9 @@ node_modules/
 # Ignore local Firebase configuration (the file with real keys)
 js/firebase-config.js
 
+# Firebase hosting cache file
+.firebase/
+
 # Build artifacts
 dist/
 build/
