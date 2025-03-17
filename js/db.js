@@ -1,23 +1,24 @@
 // db.js
 // Firestore-backed database layer for PaCE Journey Manager using the modular SDK.
+// Includes a helper to sanitize data (removing undefined fields) for Firestore.
 
-import { 
+import { dbFirestore } from "./firebase-config.js";
+import { defaultJourneyData } from "./defaultData.js";
+import {
   collection,
   doc,
   getDocs,
-  writeBatch,
-  getDoc
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-import { dbFirestore } from "./firebase-config.js";  // from getFirestore(app)
-import { defaultJourneyData } from "./defaultData.js";
+const COLLECTION_NAME = "pace-journey-manager-list";
 
-const COLLECTION_NAME = "journeyTimeline";
+// Helper: Remove undefined fields using JSON serialization.
+function sanitizeData(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
 
-/**
- * initializeDefaultData()
- * Checks if the collection is empty. If empty, inserts defaultJourneyData via batch.
- */
+// Initialize default data in Firestore if empty.
 export async function initializeDefaultData() {
   try {
     const colRef = collection(dbFirestore, COLLECTION_NAME);
@@ -27,7 +28,7 @@ export async function initializeDefaultData() {
       const batch = writeBatch(dbFirestore);
       defaultJourneyData.forEach(j => {
         const docRef = doc(dbFirestore, COLLECTION_NAME, String(j.id));
-        batch.set(docRef, j);
+        batch.set(docRef, sanitizeData(j));
       });
       await batch.commit();
       return defaultJourneyData;
@@ -40,10 +41,7 @@ export async function initializeDefaultData() {
   }
 }
 
-/**
- * loadJourneysFromFirestore()
- * Reads all docs from the collection and returns them as an array.
- */
+// Load journeys from Firestore.
 export async function loadJourneysFromFirestore() {
   try {
     const colRef = collection(dbFirestore, COLLECTION_NAME);
@@ -60,29 +58,20 @@ export async function loadJourneysFromFirestore() {
   }
 }
 
-/**
- * saveJourneysToFirestore(journeys)
- * Clears the collection, then writes the new journeys via batch.
- */
+// Save journey data to Firestore.
 export async function saveJourneysToFirestore(journeys) {
   try {
     console.log("Saving journeys to Firestore...");
     const colRef = collection(dbFirestore, COLLECTION_NAME);
-    // First read all docs so we can delete them
     const snapshot = await getDocs(colRef);
     const batch = writeBatch(dbFirestore);
-
-    // Delete all existing docs
     snapshot.forEach(docSnap => {
       batch.delete(docSnap.ref);
     });
-
-    // Add each item in journeys
     journeys.forEach(j => {
       const docRef = doc(dbFirestore, COLLECTION_NAME, String(j.id));
-      batch.set(docRef, j);
+      batch.set(docRef, sanitizeData(j));
     });
-
     await batch.commit();
     console.log("Journeys saved to Firestore.");
   } catch (error) {
@@ -90,28 +79,20 @@ export async function saveJourneysToFirestore(journeys) {
   }
 }
 
-/**
- * resetToDefaultData()
- * Similar to saveJourneysToFirestore but uses defaultJourneyData again.
- */
+// Reset Firestore data to defaults.
 export async function resetToDefaultData() {
   try {
     console.log("Resetting Firestore data to defaults...");
     const colRef = collection(dbFirestore, COLLECTION_NAME);
     const snapshot = await getDocs(colRef);
     const batch = writeBatch(dbFirestore);
-
-    // Delete all existing docs
     snapshot.forEach(docSnap => {
       batch.delete(docSnap.ref);
     });
-
-    // Insert defaultJourneyData
     defaultJourneyData.forEach(j => {
       const docRef = doc(dbFirestore, COLLECTION_NAME, String(j.id));
-      batch.set(docRef, j);
+      batch.set(docRef, sanitizeData(j));
     });
-
     await batch.commit();
     console.log("Successfully reset to default data.");
     return defaultJourneyData;

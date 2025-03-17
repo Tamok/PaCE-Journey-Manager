@@ -1,31 +1,42 @@
 // gantt.js
-// Provides functions to render Gantt charts for journeys and subjourneys.
-// Each Gantt chart is rendered as an HTML table with columns representing weeks.
-// In this example, we use a fixed set of tasks for simplicity. 
-// In a production system you may wish to dynamically generate task rows.
+// Provides functions to render dynamic Gantt charts for journeys.
+// Task durations are scaled according to the journey’s difficulty.
+// For each task, the base duration (in weeks) is scaled: easy=1, medium=1.5, hard=3 (rounded up).
+
+function getScaleFactor(difficulty) {
+  if (difficulty === "medium") return 1.5;
+  if (difficulty === "hard") return 3;
+  return 1;
+}
 
 function renderGanttChart(journey) {
-  // Determine number of weeks based on difficulty.
-  let totalWeeks = 4;
-  if (journey.difficulty === "medium") totalWeeks = 6;
-  if (journey.difficulty === "hard") totalWeeks = 8;
-
-  // Example task rows (these can be dynamically generated)
-  const tasks = [
-    { name: "Diagram Building", startWeek: 1, endWeek: 1 },
-    { name: "Content Creation", startWeek: 1, endWeek: 1 },
-    { name: "Creative Development", startWeek: 1, endWeek: 1 },
-    { name: "Initial Email Template (Zoho)", startWeek: 1, endWeek: 1 },
-    { name: "PM Approval", startWeek: 2, endWeek: 2 },
-    { name: "Sheetal Approval", startWeek: 2, endWeek: 2 },
-    { name: "Paolo Approval", startWeek: 3, endWeek: 3 },
-    { name: "Denis Approval", startWeek: 3, endWeek: 3 },
-    { name: "Zoho Workflow Building", startWeek: 2, endWeek: 2 },
-    { name: "Email Template Revision", startWeek: 3, endWeek: 3 },
-    { name: "Workflow Linking", startWeek: 3, endWeek: 3 },
-    { name: "Final Template Revision", startWeek: 4, endWeek: 4 },
-    { name: "Project Wrap-Up", startWeek: 4, endWeek: 4 }
+  const scaleFactor = getScaleFactor(journey.difficulty);
+  // Base tasks for an easy project (duration in weeks)
+  const baseTasks = [
+    { name: "Diagram Building", duration: 1 },
+    { name: "Content Creation", duration: 1 },
+    { name: "Creative Development", duration: 1 },
+    { name: "Initial Email Template (Zoho)", duration: 1 },
+    { name: "PM Approval", duration: 1 },
+    { name: "Sheetal Approval", duration: 1 },
+    { name: "Paolo Approval", duration: 1 },
+    { name: "Denis Approval", duration: 1 },
+    { name: "Zoho Workflow Building", duration: 1 },
+    { name: "Email Template Revision", duration: 1 },
+    { name: "Workflow Linking", duration: 1 },
+    { name: "Final Template Revision", duration: 1 },
+    { name: "Project Wrap-Up", duration: 1 }
   ];
+
+  // Scale durations and compute sequential start and end weeks
+  let currentWeek = 1;
+  const tasks = baseTasks.map(task => {
+    const scaledDuration = Math.ceil(task.duration * scaleFactor);
+    const taskObj = { name: task.name, startWeek: currentWeek, endWeek: currentWeek + scaledDuration - 1 };
+    currentWeek += scaledDuration;
+    return taskObj;
+  });
+  const totalWeeks = currentWeek - 1;
 
   let html = `<div class="gantt-container"><table class="gantt-table"><thead><tr><th>Task</th>`;
   for (let w = 1; w <= totalWeeks; w++) {
@@ -38,7 +49,6 @@ function renderGanttChart(journey) {
     for (let w = 1; w <= totalWeeks; w++) {
       if (w >= task.startWeek && w <= task.endWeek) {
         let cellClass = "gantt-active";
-        // For current week marking, you could calculate based on journey start date.
         html += `<td class="${cellClass}"></td>`;
       } else {
         html += `<td></td>`;

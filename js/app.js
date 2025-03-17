@@ -1,17 +1,22 @@
 // app.js
 // Main application logic for PaCE Journey Manager.
-// This module uses ES module syntax and imports functions from db.js and gantt.js.
-// It handles scheduling, rendering the timeline and details view (including collapsible Gantt charts),
-// drag-and-drop reordering, editing, adding/deleting subjourneys, and marking journeys complete.
+// Imports Firestore DB functions and Gantt chart rendering functions.
+// Handles scheduling, drag-and-drop, editing of journeys and subjourneys,
+// inline editing of descriptions and links, collapsible subjourney forms,
+// and the "Reset to Default" functionality.
 
-import { initializeDefaultData, loadJourneysFromFirestore, saveJourneysToFirestore } from "./db.js";
-import { renderGanttChart, renderCollapsibleGantt } from "./gantt.js";
+import { 
+  initializeDefaultData, 
+  saveJourneysToFirestore, 
+  resetToDefaultData 
+} from "./db.js";
+import { renderGanttChart } from "./gantt.js";
 
 console.log("PaCE Journey Manager app starting...");
 
 let journeyData = [];
 
-// Load journey data (initialize default data if needed)
+// Load data from Firestore (initialize with defaults if empty)
 async function loadData() {
   journeyData = await initializeDefaultData();
   console.log("Loaded journeyData:", journeyData);
@@ -37,21 +42,10 @@ function addDays(date, n) {
 function isWeekend(date) {
   return (date.getDay() === 0 || date.getDay() === 6);
 }
-function isHoliday(date) {
-  // Using holidayRanges from defaultData.js (or import from data.js if you prefer)
-  return false; // For now, assume no holidays; you can extend this later.
-}
 function getNextBusinessDay(date) {
   let d = new Date(date);
-  while (isWeekend(d) /*|| isHoliday(d)*/) {
+  while (isWeekend(d)) {
     d = addDays(d, 1);
-  }
-  return d;
-}
-function getPreviousBusinessDay(date) {
-  let d = new Date(date);
-  while (isWeekend(d) /*|| isHoliday(d)*/) {
-    d = addDays(d, -1);
   }
   return d;
 }
@@ -61,7 +55,7 @@ function getDuration(difficulty) {
   return 30;
 }
 
-// Sorting: sort by priority and, if Critical, by priorityNumber.
+// Sorting by priority (Critical, Important, Next, Sometime Maybe) and, if Critical, by priorityNumber.
 const priorityOrder = {
   "Critical": 1,
   "Important": 2,
@@ -92,50 +86,34 @@ function scheduleJourneys() {
     if (j.completedDate) {
       j.startDate = getNextBusinessDay(currentDate);
       j.endDate = new Date(j.completedDate);
-      if (j.endDate < j.startDate) {
-        j.startDate = new Date(j.endDate);
-      }
+      if (j.endDate < j.startDate) j.startDate = new Date(j.endDate);
     } else {
       j.startDate = getNextBusinessDay(currentDate);
       let dur = getDuration(j.difficulty);
-      let end = addDays(j.startDate, dur - 1);
-      if (isWeekend(end)) {
-        end = getPreviousBusinessDay(end);
-      }
-      j.endDate = end;
+      j.endDate = addDays(j.startDate, dur - 1);
     }
     currentDate = addDays(j.endDate, 1);
   });
 }
 
 // DOM Elements
-const resetDefaultBtn = document.getElementById("reset-default-btn");
 const timelineContainer = document.getElementById("timeline-container");
 const detailsContainer = document.getElementById("details-container");
 const addJourneyBtn = document.getElementById("add-journey-btn");
 const addJourneyForm = document.getElementById("add-journey-form");
 const saveNewJourneyBtn = document.getElementById("save-new-journey");
 const cancelNewJourneyBtn = document.getElementById("cancel-new-journey");
+const resetDefaultBtn = document.getElementById("reset-default-btn");
 
 let dragSrcEl = null;
 let currentJourneyId = null;
 
-// RESET TO DEFAULT
-resetDefaultBtn.addEventListener("click", async () => {
-  const confirmMsg = "Are you sure you want to reset all data to default? This action cannot be undone.";
-  if (confirm(confirmMsg)) {
-    journeyData = await resetToDefaultData(); // calls the new function in db.js
-    renderTimeline();
-    console.log("Data reset to defaults. Timeline reloaded.");
-  }
-});
-
-// Render Timeline (only top-level journeys; subjourneys are nested)
+// Render Timeline (top-level journeys only)
 function renderTimeline() {
   scheduleJourneys();
   timelineContainer.innerHTML = "";
-  journeyData.forEach((j, index) => {
-    if (j.priority === "Child") return;
+  journeyData.forEach((j) => {
+    if (j.priority === "Child") return; // Skip subjourneys on main timeline.
     const item = document.createElement("div");
     item.classList.add("timeline-item");
     if (j.priority === "Critical") item.classList.add("critical");
@@ -147,10 +125,7 @@ function renderTimeline() {
 
     const monthYear = j.startDate ? j.startDate.toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "";
     const dateRange = (j.startDate && j.endDate) ? `${toYMD(j.startDate)} – ${toYMD(j.endDate)}` : "";
-    item.innerHTML = `
-      <strong>${j.title}</strong>
-      <span>${monthYear}<br>${dateRange}</span>
-    `;
+    item.innerHTML = `<strong>${j.title}</strong><span>${monthYear}<br>${dateRange}</span>`;
     item.addEventListener("click", () => {
       document.querySelectorAll(".timeline-item").forEach(el => el.classList.remove("active"));
       item.classList.add("active");
@@ -190,7 +165,7 @@ function renderTimeline() {
   });
 }
 
-// Render Details for a journey (including subjourneys and Gantt charts)
+// Render Details (for a given journey, including editing, subjourney form, and Gantt charts)
 function renderDetails(journeyId) {
   const j = journeyData.find(x => x.id === journeyId);
   if (!j) {
@@ -199,13 +174,12 @@ function renderDetails(journeyId) {
   }
   detailsContainer.innerHTML = "";
 
-  // Title and priority
+  // Title and Priority Editor
   const titleDiv = document.createElement("div");
   titleDiv.classList.add("journey-title");
   titleDiv.innerHTML = `<h2>${j.title}</h2>`;
   detailsContainer.appendChild(titleDiv);
 
-  // Priority Editor
   const priorityDiv = document.createElement("div");
   priorityDiv.innerHTML = `
     <label>Priority:
@@ -228,7 +202,7 @@ function renderDetails(journeyId) {
   prioSelect.addEventListener("change", async () => {
     j.priority = prioSelect.value;
     if (j.priority !== "Critical") {
-      j.priorityNumber = undefined;
+      j.priorityNumber = null;
       prioNumber.value = "";
     }
     await saveJourneysToFirestore(journeyData);
@@ -237,21 +211,21 @@ function renderDetails(journeyId) {
   });
   prioNumber.addEventListener("change", async () => {
     if (j.priority === "Critical") {
-      j.priorityNumber = parseInt(prioNumber.value, 10) || undefined;
+      j.priorityNumber = parseInt(prioNumber.value, 10) || null;
       await saveJourneysToFirestore(journeyData);
       renderTimeline();
       renderDetails(j.id);
     }
   });
 
-  // Date Display
+  // Date display
   const dateP = document.createElement("p");
   const startStr = j.startDate ? j.startDate.toDateString() : "(unscheduled)";
   const endStr = j.endDate ? j.endDate.toDateString() : "(unscheduled)";
   dateP.innerHTML = `<strong>Schedule:</strong> ${startStr} – ${endStr}`;
   detailsContainer.appendChild(dateP);
 
-  // Podio/Zoho Links Editor (only for non-child journeys)
+  // Podio/Zoho Links Editor (for top-level journeys)
   if (j.priority !== "Child") {
     const linkEditorBtn = document.createElement("button");
     linkEditorBtn.classList.add("btn");
@@ -282,12 +256,8 @@ function renderDetails(journeyId) {
     if (j.podioLink || j.zohoLink) {
       const linkDiv = document.createElement("div");
       linkDiv.classList.add("podio-zoho-links");
-      if (j.podioLink) {
-        linkDiv.innerHTML += `<a href="${j.podioLink}" target="_blank">Podio</a> `;
-      }
-      if (j.zohoLink) {
-        linkDiv.innerHTML += `<a href="${j.zohoLink}" target="_blank">Zoho</a>`;
-      }
+      if (j.podioLink) linkDiv.innerHTML += `<a href="${j.podioLink}" target="_blank">Podio</a> `;
+      if (j.zohoLink) linkDiv.innerHTML += `<a href="${j.zohoLink}" target="_blank">Zoho</a>`;
       detailsContainer.appendChild(linkDiv);
     }
   }
@@ -338,53 +308,106 @@ function renderDetails(journeyId) {
     detailsContainer.appendChild(completeBtn);
   }
 
-  // Render Gantt Chart for this journey
+  // Render Parent's Gantt Chart
   const ganttDiv = document.createElement("div");
   ganttDiv.innerHTML = renderGanttChart(j);
   detailsContainer.appendChild(ganttDiv);
 
-  // Render Subjourneys (with their own collapsible Gantt charts)
-  if (j.subJourneys && j.subJourneys.length > 0) {
-    const subDiv = document.createElement("div");
-    subDiv.classList.add("subjourneys-container");
-    subDiv.innerHTML = "<h3>Subjourneys</h3>";
-    j.subJourneys.forEach((sub, idx) => {
-      const item = document.createElement("div");
-      item.classList.add("subjourney-item");
-      item.innerHTML = `
-        <strong>${sub.title}</strong>
-        <br><em>Difficulty:</em> ${sub.difficulty}
-        <br><em>Note:</em> ${sub.note}
-        <button class="btn delete-sub" data-index="${idx}">Delete</button>
-        <div class="sub-gantt">${renderGanttChart(sub)}</div>
-      `;
-      subDiv.appendChild(item);
-    });
-    const addSubBtn = document.createElement("button");
-    addSubBtn.classList.add("btn");
-    addSubBtn.textContent = "Add Subjourney";
-    addSubBtn.addEventListener("click", async () => {
-      const subTitle = prompt("Enter subjourney title:");
-      if (!subTitle) return;
-      const subDiff = prompt("Enter difficulty (easy, medium, hard):", "easy");
-      const subNote = prompt("Enter note (optional):", "");
-      const newSub = {
-        id: Date.now() + Math.random(),
-        title: subTitle,
-        difficulty: subDiff,
-        note: subNote
-      };
-      // If parent is complete, reopen it by removing the completedDate
-      if (j.completedDate) {
-        delete j.completedDate;
+  // Always show an "Add Subjourney" button (even if none exist)
+  const addSubjourneySection = document.createElement("div");
+  addSubjourneySection.classList.add("subjourneys-container");
+  addSubjourneySection.innerHTML = "<h3>Subjourneys</h3>";
+  const addSubBtn = document.createElement("button");
+  addSubBtn.classList.add("btn");
+  addSubBtn.textContent = "Add Subjourney";
+  // Instead of using prompt, toggle a subjourney form.
+  const subForm = document.createElement("div");
+  subForm.style.display = "none";
+  subForm.innerHTML = `
+    <input type="text" id="subjourney-title" placeholder="Subjourney Title" />
+    <select id="subjourney-difficulty">
+      <option value="easy">Easy</option>
+      <option value="medium">Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+    <input type="text" id="subjourney-note" placeholder="Subjourney Note" />
+    <input type="text" id="subjourney-podio" placeholder="Podio Link (optional)" />
+    <input type="text" id="subjourney-zoho" placeholder="Zoho Link (optional)" />
+    <button id="save-subjourney-btn" class="btn">Save Subjourney</button>
+    <button id="cancel-subjourney-btn" class="btn btn-cancel">Cancel</button>
+  `;
+  addSubBtn.addEventListener("click", () => {
+    subForm.style.display = subForm.style.display === "none" ? "block" : "none";
+  });
+  addSubBtn.style.marginTop = "10px";
+  addSubjourneySection.appendChild(addSubBtn);
+  addSubjourneySection.appendChild(subForm);
+
+  // For each subjourney, render its info with edit and delete options and a collapsible Gantt.
+  j.subJourneys.forEach((sub, idx) => {
+    const subItem = document.createElement("div");
+    subItem.classList.add("subjourney-item");
+    subItem.innerHTML = `
+      <strong>${sub.title}</strong>
+      <br><em>Difficulty:</em> ${sub.difficulty}
+      <br><em>Note:</em> <span class="sub-note-display">${sub.note}</span>
+      <button class="btn edit-sub">Edit</button>
+      <button class="btn delete-sub" data-index="${idx}">Delete</button>
+      <div class="sub-gantt">${renderGanttChart(sub)}</div>
+      <div class="edit-sub-form" style="display:none;">
+        <input type="text" class="edit-sub-title" value="${sub.title}" />
+        <select class="edit-sub-difficulty">
+          <option value="easy" ${sub.difficulty==="easy"?"selected":""}>Easy</option>
+          <option value="medium" ${sub.difficulty==="medium"?"selected":""}>Medium</option>
+          <option value="hard" ${sub.difficulty==="hard"?"selected":""}>Hard</option>
+        </select>
+        <input type="text" class="edit-sub-note" value="${sub.note}" placeholder="Subjourney Note" />
+        <input type="text" class="edit-sub-podio" value="${sub.podioLink||""}" placeholder="Podio Link" />
+        <input type="text" class="edit-sub-zoho" value="${sub.zohoLink||""}" placeholder="Zoho Link" />
+        <button class="btn save-sub-edit">Save</button>
+        <button class="btn cancel-sub-edit btn-cancel">Cancel</button>
+      </div>
+    `;
+    // Delete subjourney
+    subItem.querySelector(".delete-sub").addEventListener("click", async (e) => {
+      if (confirm("Delete this subjourney?")) {
+        j.subJourneys.splice(idx, 1);
+        await saveJourneysToFirestore(journeyData);
+        renderDetails(j.id);
       }
-      j.subJourneys.push(newSub);
+    });
+    // Edit subjourney (toggle edit form)
+    subItem.querySelector(".edit-sub").addEventListener("click", () => {
+      const editForm = subItem.querySelector(".edit-sub-form");
+      editForm.style.display = editForm.style.display === "none" ? "block" : "none";
+    });
+    // Save subjourney edit
+    subItem.querySelector(".save-sub-edit").addEventListener("click", async () => {
+      const newTitle = subItem.querySelector(".edit-sub-title").value.trim();
+      const newDiff = subItem.querySelector(".edit-sub-difficulty").value;
+      const newNote = subItem.querySelector(".edit-sub-note").value.trim();
+      const newPodio = subItem.querySelector(".edit-sub-podio").value.trim();
+      const newZoho = subItem.querySelector(".edit-sub-zoho").value.trim();
+      if (!newTitle) {
+        alert("Title required.");
+        return;
+      }
+      sub.title = newTitle;
+      sub.difficulty = newDiff;
+      sub.note = newNote;
+      sub.podioLink = newPodio;
+      sub.zohoLink = newZoho;
       await saveJourneysToFirestore(journeyData);
       renderDetails(j.id);
     });
-    subDiv.appendChild(addSubBtn);
-    detailsContainer.appendChild(subDiv);
-  }
+    // Cancel subjourney edit
+    subItem.querySelector(".cancel-sub-edit").addEventListener("click", () => {
+      subItem.querySelector(".edit-sub-form").style.display = "none";
+    });
+    subItem.style.marginBottom = "10px";
+    addSubjourneySection.appendChild(subItem);
+  });
+  detailsContainer.appendChild(addSubjourneySection);
 
   // Legend
   const legendDiv = document.createElement("div");
@@ -408,7 +431,7 @@ cancelNewJourneyBtn.addEventListener("click", () => {
 saveNewJourneyBtn.addEventListener("click", async () => {
   const title = document.getElementById("new-journey-title").value.trim();
   const prio = document.getElementById("new-journey-priority").value;
-  const subPrio = parseInt(document.getElementById("new-journey-number").value, 10) || undefined;
+  const subPrio = parseInt(document.getElementById("new-journey-number").value, 10) || null;
   const diff = document.getElementById("new-journey-difficulty").value;
   const note = document.getElementById("new-journey-note").value.trim();
   const podio = document.getElementById("new-journey-podio").value.trim();
@@ -421,11 +444,14 @@ saveNewJourneyBtn.addEventListener("click", async () => {
     id: Date.now() + Math.random(),
     title,
     priority: prio,
-    priorityNumber: (prio === "Critical") ? subPrio : undefined,
+    priorityNumber: (prio === "Critical") ? subPrio : null,
     difficulty: diff,
     note,
     podioLink: podio,
     zohoLink: zoho,
+    completedDate: null,
+    startDate: null,
+    endDate: null,
     subJourneys: []
   };
   journeyData.push(newJ);
@@ -439,7 +465,18 @@ saveNewJourneyBtn.addEventListener("click", async () => {
   renderTimeline();
 });
 
-// Save / Download Config
+// Reset to Default Button Logic
+resetDefaultBtn.addEventListener("click", async () => {
+  const confirmMsg = "Are you sure you want to reset all data to default? This action cannot be undone.";
+  if (confirm(confirmMsg)) {
+    journeyData = await resetToDefaultData();
+    renderTimeline();
+    renderDetails(journeyData[0].id);
+    console.log("Data reset to defaults.");
+  }
+});
+
+// Save / Download Config Buttons
 document.getElementById("save-config-btn").addEventListener("click", async () => {
   await saveJourneysToFirestore(journeyData);
   alert("Configuration saved to Firestore.");
@@ -452,7 +489,7 @@ document.getElementById("download-config-btn").addEventListener("click", () => {
   dlAnchor.click();
 });
 
-// Initial render
+// Initial render of timeline and details
 renderTimeline();
 if (timelineContainer.firstChild) {
   timelineContainer.firstChild.classList.add("active");
@@ -464,4 +501,3 @@ if (timelineContainer.firstChild) {
 }
 
 console.log("PaCE Journey Manager initialized with journeyData:", journeyData);
-

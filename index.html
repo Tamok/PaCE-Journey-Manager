@@ -6,23 +6,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- Link external CSS -->
   <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    /* Reset button styling */
+    #reset-default-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: #c00;
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      z-index: 100;
+    }
+    #reset-default-btn:hover {
+      background: #900;
+    }
+  </style>
 </head>
 <body>
+  <!-- Reset to Default button in the top right -->
+  <button id="reset-default-btn">Reset to Default</button>
   <div class="container">
     <h1>PaCE Journey Manager</h1>
-
-    <!-- "Reset to Default" button in top-right corner -->
-    <button id="reset-default-btn" class="btn-reset">Reset to Default</button>
 
     <!-- Timeline bubbles (top-level journeys only) -->
     <div id="timeline-container" class="horizontal-scroll"></div>
 
-    <!-- Detailed view with Gantt chart and subjourneys -->
+    <!-- Detailed view with Gantt chart, subjourneys, etc. -->
     <div id="details-container">
       <p>Select a journey bubble to see details.</p>
     </div>
 
-    <!-- Controls for adding, saving, and downloading configuration -->
+    <!-- Controls -->
     <div id="controls">
       <button id="add-journey-btn" class="btn">Add Journey</button>
       <button id="save-config-btn" class="btn">Save Configuration</button>
@@ -36,7 +54,6 @@
         <input type="text" id="new-journey-title" placeholder="Journey Title" />
       </label>
       <label>Priority:
-        <!-- Options: Critical, Important, Next, Sometime Maybe -->
         <select id="new-journey-priority">
           <option value="Critical">Critical</option>
           <option value="Important">Important</option>
@@ -70,7 +87,7 @@
     </div>
   </div>
 
-  <!-- Load our modules -->
+  <!-- Load main app module -->
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

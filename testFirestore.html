@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Firestore Connection Test</title>
+</head>
+<body>
+  <h1>Firestore Connection Test</h1>
+  <div id="status">Initializing...</div>
+  
+  <!-- Firebase SDKs (Modular) -->
+  <script type="module">
+    // 1. Import the necessary Firebase modules (from the public CDN)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    // 2. Your Firebase config (copy EXACTLY from the Firebase Console)
+    const firebaseConfig = {
+  apiKey: "AIzaSyDK90wrLtF12poASaI2bWJQARTzfgpxF3k",
+  authDomain: "pace-journey-manager.firebaseapp.com",
+  projectId: "pace-journey-manager",
+  storageBucket: "pace-journey-manager.firebasestorage.app",
+  messagingSenderId: "919919493549",
+  appId: "1:919919493549:web:3fde7f29ac1bc7c237e124"
+};
+
+    // 3. Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 4. DOM element to show status
+    const statusDiv = document.getElementById("status");
+
+    async function testFirestore() {
+      try {
+        // Write a test doc
+        const testRef = doc(db, "testCollection", "testDoc");
+        await setDoc(testRef, { timestamp: new Date().toISOString() });
+        console.log("Successfully wrote test doc.");
+
+        // Read the test doc
+        const docSnap = await getDoc(testRef);
+        if (docSnap.exists()) {
+          console.log("Test doc data:", docSnap.data());
+          statusDiv.innerText = "✅ Firestore connection SUCCESS. Data read: " + JSON.stringify(docSnap.data());
+        } else {
+          console.log("No such document!");
+          statusDiv.innerText = "⚠ Firestore write worked, but reading returned no doc.";
+        }
+      } catch (error) {
+        console.error("Firestore test error:", error);
+        statusDiv.innerText = "❌ Firestore test error: " + error.message;
+      }
+    }
+
+    // 5. Run the test
+    testFirestore();
+  </script>
+</body>
+</html>
