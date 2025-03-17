@@ -1,0 +1,13 @@
+# Node modules (if any build tools are later added)
+node_modules/
+
+# Ignore local Firebase configuration (the file with real keys)
+js/firebase-config.js
+
+# Build artifacts
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db

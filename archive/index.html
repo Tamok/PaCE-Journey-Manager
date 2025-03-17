@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>All Journeys Timeline</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Link external CSS -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>All Journeys Timeline</h1>
+
+    <!-- Timeline Bubbles (Single Line, Fancy Scroll) -->
+    <div id="timeline-container" class="horizontal-scroll"></div>
+
+    <!-- Detailed View / Gantt Section -->
+    <div id="details-container">
+      <p>Select a journey bubble to see details.</p>
+    </div>
+
+    <!-- Controls -->
+    <div id="controls">
+      <button id="add-journey-btn" class="btn">Add Journey</button>
+      <button id="save-config-btn" class="btn">Save Configuration</button>
+      <button id="download-config-btn" class="btn">Download Configuration</button>
+    </div>
+
+    <!-- Add Journey Form -->
+    <div id="add-journey-form">
+      <h3>Add New Journey</h3>
+      <label>Title:
+        <input type="text" id="new-journey-title" placeholder="Journey Title" />
+      </label>
+      <label>Priority:
+        <!-- 
+          If "Critical", we can specify a sub-priority number.
+          Otherwise: "Important", "Next", "Sometime Maybe".
+        -->
+        <select id="new-journey-priority">
+          <option value="Critical">Critical</option>
+          <option value="Important">Important</option>
+          <option value="Next">Next</option>
+          <option value="Sometime Maybe">Sometime Maybe</option>
+        </select>
+      </label>
+      <label>Sub-Priority (if Critical):
+        <input type="number" id="new-journey-number" placeholder="(1, 3, 4, etc.)" />
+      </label>
+      <label>Difficulty:
+        <select id="new-journey-difficulty">
+          <option value="easy">Easy (1 month)</option>
+          <option value="medium">Medium (1.5 months)</option>
+          <option value="hard">Hard (2 months)</option>
+        </select>
+      </label>
+      <label>Podio Link (optional):
+        <input type="text" id="new-journey-podio" placeholder="https://podio.com/..." />
+      </label>
+      <label>Zoho Link (optional):
+        <input type="text" id="new-journey-zoho" placeholder="https://zoho.com/..." />
+      </label>
+      <label>Note:
+        <input type="text" id="new-journey-note" placeholder="Enter a note" />
+      </label>
+      <div class="form-buttons">
+        <button id="save-new-journey" class="btn">Save Journey</button>
+        <button id="cancel-new-journey" class="btn btn-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load data + db + main logic -->
+  <script src="data.js"></script>
+  <script src="db.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

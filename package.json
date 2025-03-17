@@ -1,0 +1,19 @@
+{
+  "name": "pace-journey-manager",
+  "version": "1.0.0",
+  "description": "PaCE Journey Manager is a production‑ready, modular JavaScript application that displays a timeline of journeys with real‑time updates using Firebase Firestore. It supports nested sub‑journeys (each with its own collapsible Gantt chart and tasks), drag‑and‑drop reordering, editable priorities and links, and more. The app is designed to be hosted as a static site and easily embedded into your Drupal website. All updates are shared in real time across users.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rimraf dist && mkdirp dist && mkdirp dist/css && mkdirp dist/js && npx cpx \"index.html\" dist && npx cpx \"firebase.json\" dist && npx cpx \".firebaserc\" dist && npx cpx \"README.md\" dist && npx cpx \"css/**/*\" dist/css && npx cpx \"js/**/*\" dist/js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "cpx": "^1.5.0",
+    "cpy-cli": "^5.0.0",
+    "mkdirp": "^3.0.1",
+    "rimraf": "^6.0.1"
+  }
+}
