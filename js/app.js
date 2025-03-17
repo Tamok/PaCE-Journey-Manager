@@ -8,20 +8,17 @@
  *    falling back to default data (from defaultData.js) if none exists.
  *  - Schedules journeys based on difficulty and parent–child relationships.
  *  - Renders a draggable timeline and detailed view with an interactive Gantt chart.
- *  - Persists any changes (such as reordering) to the database.
+ *  - Persists any changes (such as reordering, editing) to the database.
  *  - Provides a “Reset to Default” option that uses the defaultData.js definitions.
- *
- * Environment variables such as Firebase configuration should be stored in a .env file
- * and referenced by the db.js module.
  *
  * Author: Your Name
  * Date: YYYY-MM-DD
  */
 
 // Import modules.
-import { scheduleJourneys, toYMD, BASE_START_DATE } from "./scheduler.js";
+import { scheduleJourneys, toYMD } from "./scheduler.js";
 import { renderTimeline } from "./timeline.js";
-import { renderGantt, bindApprovalCheckboxes } from "./gantt.js";
+import { renderJourneyDetails } from "./journeyDetails.js";
 import {
   initializeDefaultData,
   saveJourneysToFirestore,
@@ -30,60 +27,34 @@ import {
 
 // Get DOM elements.
 const timelineContainer = document.getElementById("timeline-container");
-const detailsContainer = document.getElementById("details-container");
 const resetDefaultBtn = document.getElementById("reset-default-btn");
 
 // Global journey data array.
 let journeyData = [];
 
 /**
- * Renders the detailed view for the selected journey.
+ * Renders the detailed view for the selected journey using the journeyDetails module.
  *
  * @param {number} index - The index of the journey in journeyData.
  */
 function renderDetails(index) {
   const journey = journeyData[index];
-  detailsContainer.innerHTML = "";
-
-  // Render journey title.
-  const titleDiv = document.createElement("div");
-  titleDiv.classList.add("journey-title");
-  titleDiv.innerHTML = `<h2>${journey.title}</h2>`;
-  detailsContainer.appendChild(titleDiv);
-
-  // Additional detail sections (priority selectors, notes, link editors, etc.)
-  // can be added here as needed.
-
-  // Render the Gantt chart.
-  const ganttTitle = document.createElement("h3");
-  ganttTitle.textContent = "Weekly Breakdown (Gantt)";
-  detailsContainer.appendChild(ganttTitle);
-
-  const ganttHTML = renderGantt(journey);
-  detailsContainer.insertAdjacentHTML("beforeend", ganttHTML);
-
-  // Bind approval checkbox events so that checking them stamps the task.
-  bindApprovalCheckboxes(journey);
-  console.log(`Rendered details for journey "${journey.title}".`);
+  renderJourneyDetails(journey, journeyData, saveJourneyData, renderAppTimeline);
 }
 
 /**
  * Renders the timeline with drag & drop reordering.
- *
- * The timeline module updates journeyData with an explicit 'order'
- * property when items are manually reordered. After each reordering,
- * the new journey order is saved to the database.
+ * After rendering, persists changes to the database.
  */
 function renderAppTimeline() {
   renderTimeline(journeyData, timelineContainer, renderDetails);
   console.log("Timeline rendered with updated journey data.");
-  // Persist changes after rendering (e.g. after a drop event).
   saveJourneyData();
 }
 
 /**
- * Loads journey data from the database. If no data exists,
- * resets to default (using defaultData.js via resetToDefaultData).
+ * Loads journey data from the database.
+ * If no data exists, resets to default data.
  */
 async function loadJourneyData() {
   try {
@@ -146,7 +117,7 @@ if (resetDefaultBtn) {
 /**
  * Initializes the application:
  *  - Loads journey data from the database.
- *  - Renders the timeline.
+ *  - Renders the timeline and details view.
  */
 async function initApp() {
   console.log("Initializing PaCE Journey Manager...");
@@ -155,7 +126,3 @@ async function initApp() {
 
 // Initialize the application.
 initApp();
-
-// Note: The timeline module (timeline.js) should be written so that any drag-and-drop reordering
-// updates the journeyData array with an explicit 'order' property and calls the provided renderDetails callback.
-// This, in turn, triggers saveJourneyData() to persist changes.
