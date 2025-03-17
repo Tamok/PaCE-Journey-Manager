@@ -1,7 +1,15 @@
-// defaultData.js
-// Complete default journey data based on the provided spreadsheet.
-// Numeric priorities become "Critical" with a priorityNumber; other priorities are set as provided.
-// Subjourneys (child rows) are nested inside the parent's subJourneys array.
+/**
+ * defaultData.js
+ *
+ * Complete default journey data for PaCE Journey Manager.
+ *
+ * Main journeys use the standard priorities (Critical, Important, Next, Sometime Maybe)
+ * and have their own difficulty values. All subjourneys (child journeys) are nested
+ * inside a parent's subJourneys array. For every subjourney, the difficulty is set to "Easy"
+ * and the priority is set to "Next". This indicates that they are subordinate to a main journey.
+ *
+ * This file is used to initialize the Firestore database if no journey data is present.
+ */
 
 const defaultJourneyData = [
   {
@@ -9,7 +17,7 @@ const defaultJourneyData = [
     title: "Project Management",
     priority: "Critical",
     priorityNumber: 1,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -23,7 +31,7 @@ const defaultJourneyData = [
     title: "Child Life",
     priority: "Critical",
     priorityNumber: 3,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -37,7 +45,7 @@ const defaultJourneyData = [
     title: "International Programs",
     priority: "Critical",
     priorityNumber: 4,
-    difficulty: "hard",
+    difficulty: "Hard",
     note: "account for potential differentiation, see child elements",
     podioLink: "",
     zohoLink: "",
@@ -48,7 +56,8 @@ const defaultJourneyData = [
       {
         id: "new_student_info",
         title: "New Student Info",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of International Programs",
         podioLink: "",
         zohoLink: ""
@@ -56,7 +65,8 @@ const defaultJourneyData = [
       {
         id: "customized_programs_1",
         title: "Customized Programs",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of International Programs",
         podioLink: "",
         zohoLink: ""
@@ -64,7 +74,8 @@ const defaultJourneyData = [
       {
         id: "customized_programs_2",
         title: "Customized Programs",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of International Programs",
         podioLink: "",
         zohoLink: ""
@@ -72,7 +83,8 @@ const defaultJourneyData = [
       {
         id: "visiting_scholars",
         title: "Visiting Scholars & Executives",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of International Programs",
         podioLink: "",
         zohoLink: ""
@@ -80,7 +92,8 @@ const defaultJourneyData = [
       {
         id: "international_students",
         title: "International Students",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of International Programs",
         podioLink: "",
         zohoLink: ""
@@ -88,7 +101,8 @@ const defaultJourneyData = [
       {
         id: "international_diploma",
         title: "International Diploma Program",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of International Programs",
         podioLink: "",
         zohoLink: ""
@@ -96,7 +110,8 @@ const defaultJourneyData = [
       {
         id: "international_housing",
         title: "International Student Housing",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of International Programs",
         podioLink: "",
         zohoLink: ""
@@ -104,7 +119,8 @@ const defaultJourneyData = [
       {
         id: "university_immersion",
         title: "University Immersion Program",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of International Programs",
         podioLink: "",
         zohoLink: ""
@@ -112,7 +128,8 @@ const defaultJourneyData = [
       {
         id: "optional_practical_training",
         title: "Optional Practical Training (Help Center)",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of International Programs",
         podioLink: "",
         zohoLink: ""
@@ -120,7 +137,8 @@ const defaultJourneyData = [
       {
         id: "step_upp_pathway",
         title: "Step UPP: Undergraduate Pathway Program",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of International Programs",
         podioLink: "",
         zohoLink: ""
@@ -128,7 +146,8 @@ const defaultJourneyData = [
       {
         id: "three_plus_one",
         title: "3+1",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of International Programs",
         podioLink: "",
         zohoLink: ""
@@ -140,7 +159,7 @@ const defaultJourneyData = [
     title: "Paralegal Studies",
     priority: "Critical",
     priorityNumber: 5,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -154,7 +173,7 @@ const defaultJourneyData = [
     title: "Accounting & Finance",
     priority: "Next",
     priorityNumber: null,
-    difficulty: "medium",
+    difficulty: "Medium",
     note: "account for potential differentiation, see elements",
     podioLink: "",
     zohoLink: "",
@@ -165,7 +184,8 @@ const defaultJourneyData = [
       {
         id: "business_accounting",
         title: "Business Accounting",
-        difficulty: "medium",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of Accounting & Finance",
         podioLink: "",
         zohoLink: ""
@@ -173,7 +193,8 @@ const defaultJourneyData = [
       {
         id: "professional_accounting",
         title: "Professional Accounting",
-        difficulty: "medium",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of Accounting & Finance",
         podioLink: "",
         zohoLink: ""
@@ -181,7 +202,8 @@ const defaultJourneyData = [
       {
         id: "cpa_licensure_prep",
         title: "CPA Licensure Prep Summer Program",
-        difficulty: "medium",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of Accounting & Finance",
         podioLink: "",
         zohoLink: ""
@@ -189,7 +211,8 @@ const defaultJourneyData = [
       {
         id: "strategic_investments",
         title: "Strategic Investments",
-        difficulty: "medium",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of Accounting & Finance",
         podioLink: "",
         zohoLink: ""
@@ -201,7 +224,7 @@ const defaultJourneyData = [
     title: "Achieve",
     priority: "Sometime Maybe",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "but are we still doing that?",
     podioLink: "",
     zohoLink: "",
@@ -215,7 +238,7 @@ const defaultJourneyData = [
     title: "Business Administration and Management",
     priority: "Important",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -229,7 +252,7 @@ const defaultJourneyData = [
     title: "Business Communication & Law",
     priority: "Next",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "but are we still doing that? Difference with Paralegal?",
     podioLink: "",
     zohoLink: "",
@@ -243,7 +266,7 @@ const defaultJourneyData = [
     title: "Business Leadership",
     priority: "Next",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "but are we still doing that? Difference with BAM",
     podioLink: "",
     zohoLink: "",
@@ -257,7 +280,7 @@ const defaultJourneyData = [
     title: "Cleanroom Training",
     priority: "Next",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -271,7 +294,7 @@ const defaultJourneyData = [
     title: "Customer Experience (3rd party)",
     priority: "Sometime Maybe",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -285,7 +308,7 @@ const defaultJourneyData = [
     title: "Digital Marketing",
     priority: "Next",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -299,7 +322,7 @@ const defaultJourneyData = [
     title: "Educational Partnerships",
     priority: "Sometime Maybe",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -313,7 +336,7 @@ const defaultJourneyData = [
     title: "EV Technician Training (3rd party)",
     priority: "Sometime Maybe",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -327,7 +350,7 @@ const defaultJourneyData = [
     title: "Executive Education & Leadership",
     priority: "Sometime Maybe",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -341,7 +364,7 @@ const defaultJourneyData = [
     title: "Applied Behavior Analysis",
     priority: "Important",
     priorityNumber: null,
-    difficulty: "hard",
+    difficulty: "Hard",
     note: "account for potential differentiation, see child elements",
     podioLink: "",
     zohoLink: "",
@@ -352,7 +375,8 @@ const defaultJourneyData = [
       {
         id: "bcba",
         title: "BCBA",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of Applied Behavior Analysis",
         podioLink: "",
         zohoLink: ""
@@ -360,7 +384,8 @@ const defaultJourneyData = [
       {
         id: "bcaba",
         title: "BCaBA",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of Applied Behavior Analysis",
         podioLink: "",
         zohoLink: ""
@@ -368,7 +393,8 @@ const defaultJourneyData = [
       {
         id: "qba",
         title: "QBA",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of Applied Behavior Analysis",
         podioLink: "",
         zohoLink: ""
@@ -376,7 +402,8 @@ const defaultJourneyData = [
       {
         id: "qasp_s",
         title: "QASP-S",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of Applied Behavior Analysis",
         podioLink: "",
         zohoLink: ""
@@ -384,7 +411,8 @@ const defaultJourneyData = [
       {
         id: "behavior_supports_systems",
         title: "Behavior Supports & Systems",
-        difficulty: "hard",
+        difficulty: "Easy",
+        priority: "Next",
         note: "child of Applied Behavior Analysis",
         podioLink: "",
         zohoLink: ""
@@ -396,7 +424,7 @@ const defaultJourneyData = [
     title: "Emergency Medical Technician",
     priority: "Important",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -410,7 +438,7 @@ const defaultJourneyData = [
     title: "Digital Technology",
     priority: "Next",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "combine as one with Python and WebDev journeys",
     podioLink: "",
     zohoLink: "",
@@ -424,7 +452,7 @@ const defaultJourneyData = [
     title: "Blockchain (3rd Party)",
     priority: "Sometime Maybe",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "but are we still doing that?",
     podioLink: "",
     zohoLink: "",
@@ -438,7 +466,7 @@ const defaultJourneyData = [
     title: "Human Resource Management",
     priority: "Important",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -452,7 +480,7 @@ const defaultJourneyData = [
     title: "Infrared Programs",
     priority: "Important",
     priorityNumber: null,
-    difficulty: "medium",
+    difficulty: "Medium",
     note: "account for potential differentiation, see child elements",
     podioLink: "",
     zohoLink: "",
@@ -463,7 +491,8 @@ const defaultJourneyData = [
       {
         id: "intro_infrared_imaging",
         title: "Introduction to Infrared Imaging Technology",
-        difficulty: "medium",
+        difficulty: "Medium",
+        priority: "Next",
         note: "child of Infrared Programs",
         podioLink: "",
         zohoLink: ""
@@ -471,7 +500,8 @@ const defaultJourneyData = [
       {
         id: "modern_infrared_detectors",
         title: "Modern Infrared Detectors & Systems Applications",
-        difficulty: "medium",
+        difficulty: "Medium",
+        priority: "Next",
         note: "child of Infrared Programs",
         podioLink: "",
         zohoLink: ""
@@ -479,7 +509,8 @@ const defaultJourneyData = [
       {
         id: "free_ir_course_trailers",
         title: "FREE IR Course Trailers",
-        difficulty: "medium",
+        difficulty: "Medium",
+        priority: "Next",
         note: "child of Infrared Programs",
         podioLink: "",
         zohoLink: ""
@@ -491,7 +522,7 @@ const defaultJourneyData = [
     title: "Introduction to Global Business",
     priority: "Important",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -505,7 +536,7 @@ const defaultJourneyData = [
     title: "Open University",
     priority: "Important",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -519,7 +550,7 @@ const defaultJourneyData = [
     title: "Organizational Partnerships",
     priority: "Sometime Maybe",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -533,7 +564,7 @@ const defaultJourneyData = [
     title: "Professional Career Advising",
     priority: "Sometime Maybe",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "but are we still doing that?",
     podioLink: "",
     zohoLink: "",
@@ -547,7 +578,7 @@ const defaultJourneyData = [
     title: "Technology Management",
     priority: "Sometime Maybe",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -561,7 +592,7 @@ const defaultJourneyData = [
     title: "UC Degree Completion Program",
     priority: "Sometime Maybe",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -575,7 +606,7 @@ const defaultJourneyData = [
     title: "Women in Leadership (3rd party)",
     priority: "Sometime Maybe",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "but are we doing 3rd parties?",
     podioLink: "",
     zohoLink: "",
@@ -589,7 +620,7 @@ const defaultJourneyData = [
     title: "End of life generic - last extreme attempt $100",
     priority: "Important",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -603,7 +634,7 @@ const defaultJourneyData = [
     title: "Lead Nurture",
     priority: "Next",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -617,7 +648,7 @@ const defaultJourneyData = [
     title: "Welcome (AW)",
     priority: "Next",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -631,7 +662,7 @@ const defaultJourneyData = [
     title: "Re-Engagement (emtpy cart)",
     priority: "Next",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -645,7 +676,7 @@ const defaultJourneyData = [
     title: "Nurture Tracks",
     priority: "Sometime Maybe",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -659,7 +690,7 @@ const defaultJourneyData = [
     title: "Current Student",
     priority: "Next",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",
@@ -673,7 +704,7 @@ const defaultJourneyData = [
     title: "Post-purchase journey",
     priority: "Next",
     priorityNumber: null,
-    difficulty: "easy",
+    difficulty: "Easy",
     note: "",
     podioLink: "",
     zohoLink: "",

@@ -1,60 +1,59 @@
 /**
  * timeline.js
  *
- * Handles rendering of the timeline, drag and drop reordering,
- * and binding events to each journey timeline item.
+ * Renders the timeline for top-level journeys with drag-and-drop reordering.
+ * Each timeline circle now shows only the month/year (formatted with weekday on hover),
+ * along with the journey title.
  *
  * Author: Your Name
  * Date: YYYY-MM-DD
  */
 
-import { toYMD, getNextBusinessDay, addDays } from "./scheduler.js";
+import { toYMD } from "./scheduler.js";
 import { scheduleJourneys } from "./scheduler.js";
 
+/**
+ * Renders the timeline.
+ * @param {Array} journeyData - Array of journey objects.
+ * @param {HTMLElement} timelineContainer - DOM element for timeline.
+ * @param {Function} renderDetailsCallback - Callback to render details.
+ */
 export function renderTimeline(journeyData, timelineContainer, renderDetailsCallback) {
-  // Update scheduling before rendering.
   scheduleJourneys(journeyData);
-  timelineContainer.innerHTML = ""; // Clear the container.
-
+  timelineContainer.innerHTML = "";
   journeyData.forEach((j, index) => {
-    // Optionally skip child journeys in the main timeline.
-    if (j.priority === "Child") return;
-
+    if (j.parentId) return;
     const item = document.createElement("div");
     item.classList.add("timeline-item");
-
-    // Apply styling classes based on priority.
-    if (j.priority === "Critical") {
-      item.classList.add("critical");
-    } else if (j.priority === "Important") {
-      item.classList.add("important");
-    } else if (j.priority === "Next") {
-      item.classList.add("next");
-    } else if (j.priority === "Sometime Maybe") {
-      item.classList.add("maybe");
-    }
     if (j.completedDate) item.classList.add("completed");
+    // Apply priority class.
+    if (j.priority === "Critical") item.classList.add("critical");
+    else if (j.priority === "Important") item.classList.add("important");
+    else if (j.priority === "Next") item.classList.add("next");
+    else if (j.priority === "Sometime Maybe") item.classList.add("maybe");
 
     item.setAttribute("draggable", "true");
 
-    const monthYear = j.startDate ? j.startDate.toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "";
-    const dateRange = (j.startDate && j.endDate) ? `${toYMD(j.startDate)} – ${toYMD(j.endDate)}` : "";
-    item.innerHTML = `<strong>${j.title}</strong><span>${monthYear}<br>${dateRange}</span>`;
-
-    // When clicked, render the details view.
+    // Only display month/year.
+    const startStr = j.startDate ? new Date(j.startDate).toLocaleDateString("en-US", { month:"short", year:"numeric" }) : "";
+    // On hover, show weekday as well.
+    const hoverStr = j.startDate ? new Date(j.startDate).toLocaleDateString("en-US", { weekday:"short", month:"short", year:"numeric" }) : "";
+    item.innerHTML = `
+      <strong>${j.title}</strong>
+      <span style="font-size:0.85rem;" title="${hoverStr}">${startStr}</span>
+    `;
     item.addEventListener("click", () => {
       document.querySelectorAll(".timeline-item").forEach(el => el.classList.remove("active"));
       item.classList.add("active");
       renderDetailsCallback(index);
     });
-
-    // Drag and drop event handlers.
-    item.addEventListener("dragstart", e => {
+    // Drag-and-drop events.
+    item.addEventListener("dragstart", (e) => {
       timelineContainer.dragSrcEl = item;
       e.dataTransfer.effectAllowed = "move";
-      console.log(`Drag started for journey "${j.title}".`);
+      console.log(`Started dragging journey "${j.title}".`);
     });
-    item.addEventListener("dragover", e => {
+    item.addEventListener("dragover", (e) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
       item.classList.add("drop-target");
@@ -62,7 +61,7 @@ export function renderTimeline(journeyData, timelineContainer, renderDetailsCall
     item.addEventListener("dragleave", () => {
       item.classList.remove("drop-target");
     });
-    item.addEventListener("drop", e => {
+    item.addEventListener("drop", async (e) => {
       e.stopPropagation();
       item.classList.remove("drop-target");
       const dragSrcEl = timelineContainer.dragSrcEl;
@@ -72,12 +71,8 @@ export function renderTimeline(journeyData, timelineContainer, renderDetailsCall
         const toIndex = children.indexOf(item);
         const [moved] = journeyData.splice(fromIndex, 1);
         journeyData.splice(toIndex, 0, moved);
-        // Set explicit ordering.
-        journeyData.forEach((journey, idx) => {
-          journey.order = idx;
-        });
-        console.log(`Reordered journey "${moved.title}" from position ${fromIndex} to ${toIndex}.`);
-        // Re-render timeline and details.
+        journeyData.forEach((journey, idx) => { journey.order = idx; });
+        console.log(`Reordered journey "${moved.title}" from ${fromIndex} to ${toIndex}.`);
         renderTimeline(journeyData, timelineContainer, renderDetailsCallback);
         item.classList.add("active");
         renderDetailsCallback(toIndex);
@@ -86,7 +81,6 @@ export function renderTimeline(journeyData, timelineContainer, renderDetailsCall
     item.addEventListener("dragend", () => {
       document.querySelectorAll(".timeline-item").forEach(el => el.classList.remove("drop-target"));
     });
-
     timelineContainer.appendChild(item);
   });
 }

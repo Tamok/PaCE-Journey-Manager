@@ -1,31 +1,17 @@
 /**
  * gantt.js
  *
- * This module is responsible for rendering the Gantt chart for a journey and
- * binding approval checkbox events to timestamp task approvals.
- *
- * The chart is built as an HTML table with the number of columns determined by the journey's difficulty:
- *   - Easy: 4 weeks
- *   - Medium: 6 weeks
- *   - Hard: 8 weeks
- *
- * Each task row is based on a default set of tasks (baseTaskRows) which is cloned and adapted.
- * Approval tasks include a checkbox that, when checked, is stamped with the current date and time.
+ * Renders the Gantt chart for a journey and binds events for approval checkboxes.
+ * Non-approval tasks (i.e. creative tasks) are recalculated based on the journey's difficulty.
+ * Dependencies are highlighted on hover.
  *
  * Author: Your Name
  * Date: YYYY-MM-DD
  */
 
-/* ---------------------------
-   Base Task Rows Definition
----------------------------- */
-/**
- * The base set of task rows used to build the Gantt chart.
- * This is cloned and adapted (by shifting weeks or adding extra tasks)
- * depending on the journey's difficulty.
- */
+/* Base Task Rows Definition */
 const baseTaskRows = [
-  // Week 1 Tasks
+  // Non-approval tasks (their durations will be scaled)
   {
     name: "Diagram Building",
     startWeek: 1,
@@ -54,7 +40,7 @@ const baseTaskRows = [
     dependencies: ["Creative Development"],
     isApproval: false
   },
-  // Approval tasks (Weeks 2-3)
+  // Approval tasks (fixed at 2 weeks, constant order)
   {
     name: "PM Approval",
     startWeek: 2,
@@ -105,7 +91,7 @@ const baseTaskRows = [
     dependencies: ["Email Template Revision"],
     isApproval: false
   },
-  // Week 4 Tasks
+  // Final tasks
   {
     name: "Final Template Revision",
     startWeek: 4,
@@ -122,125 +108,57 @@ const baseTaskRows = [
   }
 ];
 
-/* ---------------------------------
-   Task Rows Adaptation for a Journey
----------------------------------- */
 /**
- * Returns the task rows for a given journey.
- * If the journey already has a taskRows property, that is returned.
- * Otherwise, a clone of the baseTaskRows is adapted based on journey.difficulty:
- *   - For medium difficulty, tasks scheduled in week 4 are shifted to week 5 and an extra row is added.
- *   - For hard difficulty, tasks are pushed out further and extra QA/Wrap-up rows are added.
- *
+ * Adapts the base task rows for a given journey.
+ * Approval tasks remain fixed (2 weeks). Non-approval tasks are scaled.
+ * Scaling factor is (totalWeeks / 4), where totalWeeks is based on difficulty:
+ *   Easy = 4, Medium = 6, Hard = 8.
  * @param {Object} journey - The journey object.
- * @returns {Array} An array of task rows.
+ * @returns {Array} Task rows for the journey.
  */
 function getTaskRowsForJourney(journey) {
   if (journey.taskRows) return journey.taskRows;
 
-  // Clone the base tasks.
   const cloned = JSON.parse(JSON.stringify(baseTaskRows));
+  let totalWeeks = 4;
+  if (journey.difficulty === "Medium") totalWeeks = 6;
+  else if (journey.difficulty === "Hard") totalWeeks = 8;
+  const factor = totalWeeks / 4;
 
-  if (journey.difficulty === "medium") {
-    // Shift tasks scheduled at week 4 to week 5.
-    cloned.forEach(task => {
-      if (task.startWeek === 4) {
-        task.startWeek = 5;
-        task.endWeek = 5;
-      }
-    });
-    // Add an extra row for medium difficulty.
-    cloned.push({
-      name: "Extended QA & Wrap-Up",
-      startWeek: 6,
-      endWeek: 6,
-      dependencies: [],
-      isApproval: false
-    });
-    console.log(`Adapted ${cloned.length} task rows for medium difficulty.`);
-  } else if (journey.difficulty === "hard") {
-    // For hard difficulty, push tasks out to extend the timeline.
-    cloned.forEach(task => {
-      if (task.startWeek === 4) {
-        task.startWeek = 7;
-        task.endWeek = 7;
-      }
-      // Other tasks may remain as is.
-    });
-    // Add additional rows specific to hard difficulty.
-    cloned.push({
-      name: "Additional Hard Journey QA",
-      startWeek: 5,
-      endWeek: 6,
-      dependencies: [],
-      isApproval: false
-    });
-    cloned.push({
-      name: "Extended Approvals (if needed)",
-      startWeek: 5,
-      endWeek: 6,
-      dependencies: [],
-      isApproval: true
-    });
-    cloned.push({
-      name: "Pre-Final Wrap-Up",
-      startWeek: 6,
-      endWeek: 6,
-      dependencies: [],
-      isApproval: false
-    });
-    cloned.push({
-      name: "Final Wrap-Up",
-      startWeek: 8,
-      endWeek: 8,
-      dependencies: [],
-      isApproval: false
-    });
-    console.log(`Adapted ${cloned.length} task rows for hard difficulty.`);
-  } else {
-    console.log(`Using base task rows for easy difficulty.`);
-  }
-
+  cloned.forEach(task => {
+    if (!task.isApproval) {
+      task.startWeek = Math.max(1, Math.round(task.startWeek * factor));
+      task.endWeek = Math.max(task.startWeek, Math.round(task.endWeek * factor));
+    }
+  });
   journey.taskRows = cloned;
   return journey.taskRows;
 }
 
-/* -------------------------------
-   Gantt Chart Rendering Function
--------------------------------- */
 /**
- * Renders the Gantt chart for a given journey.
- * The chart is returned as an HTML string.
- *
- * @param {Object} journey - The journey object, which must have a defined difficulty and startDate.
- * @returns {string} HTML string representing the Gantt chart.
+ * Renders the Gantt chart for a journey.
+ * @param {Object} journey - The journey object.
+ * @returns {string} HTML string of the Gantt chart.
  */
 export function renderGantt(journey) {
   let totalWeeks = 4;
-  if (journey.difficulty === "medium") {
-    totalWeeks = 6;
-  } else if (journey.difficulty === "hard") {
-    totalWeeks = 8;
-  }
-
+  if (journey.difficulty === "Medium") totalWeeks = 6;
+  else if (journey.difficulty === "Hard") totalWeeks = 8;
   let html = `<div class="gantt-container">
     <table class="gantt-table">
       <thead>
         <tr>
           <th class="task-row-name">Task</th>`;
-
-  // Create table headers for each week.
   for (let w = 1; w <= totalWeeks; w++) {
     html += `<th>Week ${w}</th>`;
   }
   html += `</tr></thead><tbody>`;
-
-  // Get task rows (either pre-defined or adapted from baseTaskRows).
   const rows = getTaskRowsForJourney(journey);
   rows.forEach((row, rowIndex) => {
-    html += `<tr>`;
-    html += `<td class="task-row-name">`;
-    // For approval tasks, include a checkbox with a data attribute.
+    html += `<tr class="gantt-row" data-index="${rowIndex}">`;
+    html += `<td class="task-row-name" 
+              onmouseenter="this.parentElement.classList.add('dependency-highlight')" 
+              onmouseleave="this.parentElement.classList.remove('dependency-highlight')">`;
     if (row.isApproval) {
       html += `<label>
         <input type="checkbox" class="approval-checkbox" data-task-index="${rowIndex}" ${row.approvedOn ? "checked disabled" : ""} />
@@ -258,19 +176,14 @@ export function renderGantt(journey) {
       html += `<br><small>depends on: ${row.dependencies.join(", ")}</small>`;
     }
     html += `</td>`;
-
-    // Render cells for each week.
     for (let w = 1; w <= totalWeeks; w++) {
       if (w >= row.startWeek && w <= row.endWeek) {
         let cellClass = "gantt-active";
-        // If journey.startDate exists, mark the cell corresponding to the current week.
         if (journey.startDate) {
           const oneWeekMs = 7 * 24 * 3600 * 1000;
           const today = new Date();
-          const weekIndex = Math.floor((today - journey.startDate) / oneWeekMs) + 1;
-          if (weekIndex === w) {
-            cellClass += " gantt-current";
-          }
+          const weekIndex = Math.floor((today - new Date(journey.startDate)) / oneWeekMs) + 1;
+          if (weekIndex === w) cellClass += " gantt-current";
         }
         html += `<td class="${cellClass}"></td>`;
       } else {
@@ -279,27 +192,20 @@ export function renderGantt(journey) {
     }
     html += `</tr>`;
   });
-
   html += `</tbody></table></div>`;
-  console.log(`Rendered Gantt chart for journey "${journey.title}" with ${totalWeeks} weeks.`);
+  console.log(`Rendered Gantt chart for "${journey.title}" (${totalWeeks} weeks).`);
   return html;
 }
 
-/* -------------------------------------------
-   Approval Checkbox Event Binding Function
--------------------------------------------- */
 /**
  * Binds event listeners to approval checkboxes in the rendered Gantt chart.
- * When an approval checkbox is checked, the corresponding task row is stamped with the current timestamp,
- * and the checkbox is disabled.
- *
- * @param {Object} journey - The journey object which has taskRows.
+ * When checked, stamps the task with the current timestamp and disables the checkbox.
+ * @param {Object} journey - The journey object.
  */
 export function bindApprovalCheckboxes(journey) {
-  // Look for approval checkboxes within the gantt container.
   const container = document.querySelector(".gantt-container");
   if (!container) {
-    console.warn("No gantt container found when binding approval checkboxes.");
+    console.warn("No gantt container found for binding approval checkboxes.");
     return;
   }
   const checkboxes = container.querySelectorAll(".approval-checkbox");
@@ -312,7 +218,6 @@ export function bindApprovalCheckboxes(journey) {
         if (rows && rows[taskIndex]) {
           rows[taskIndex].approvedOn = nowStr;
         }
-        // Update the adjacent timestamp span.
         const timeSpan = checkbox.parentElement.nextElementSibling ||
                          checkbox.parentElement.querySelector(".approval-timestamp");
         if (timeSpan) {

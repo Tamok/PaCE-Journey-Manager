@@ -1,22 +1,14 @@
 /**
  * journeyDetails.js
  *
- * Module for rendering the detailed view of a journey including:
- * - Title display
- * - Podio/Zoho links editing for top-level journeys
- * - Note editing
- * - Mark as complete functionality
- * - Parent Gantt chart display
- * - Subjourney management with collapsible Gantt charts, and edit/delete capabilities
+ * Renders the detailed view for a journey.
+ * Displays title, editable dropdowns for difficulty and priority (without duplicate text),
+ * schedule information (month and weekday), Podio/Zoho link editing, note editing,
+ * and a Gantt chart. Also manages subjourneys – which are draggable, have colored accents,
+ * changeable difficulty/priority, and can be marked complete.
  *
  * Exports:
  *   renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback)
- *
- * Parameters:
- *   journey - The journey object whose details are to be displayed.
- *   journeyData - The full array of journeys (to allow saving any updates).
- *   saveCallback - An async function to persist journey data (e.g. saveJourneyData).
- *   refreshTimelineCallback - A function to refresh the timeline display after changes.
  */
 
 import { renderGantt, bindApprovalCheckboxes } from "./gantt.js";
@@ -24,22 +16,63 @@ import { toYMD, parseDate } from "./scheduler.js";
 
 export function renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback) {
   const detailsContainer = document.getElementById("details-container");
-  detailsContainer.innerHTML = ""; // Clear previous content
+  detailsContainer.innerHTML = "";
+  console.log(`Rendering details for journey: ${journey.title}`);
 
-  // Render Journey Title
+  // Title and basic schedule info.
   const titleDiv = document.createElement("div");
   titleDiv.classList.add("journey-title");
   titleDiv.innerHTML = `<h2>${journey.title}</h2>`;
   detailsContainer.appendChild(titleDiv);
-  console.log(`Rendering details for journey: ${journey.title}`);
 
-  // Podio/Zoho Links Editor (only for top-level journeys)
+  // Editable dropdowns for difficulty and priority (only the dropdown is shown).
+  const infoDiv = document.createElement("div");
+  infoDiv.innerHTML = `
+    <div style="margin-bottom:8px;">
+      <label><strong>Difficulty:</strong></label>
+      <select id="edit-difficulty">
+        <option value="Easy" ${journey.difficulty==="Easy"?"selected":""}>Easy</option>
+        <option value="Medium" ${journey.difficulty==="Medium"?"selected":""}>Medium</option>
+        <option value="Hard" ${journey.difficulty==="Hard"?"selected":""}>Hard</option>
+      </select>
+    </div>
+    <div style="margin-bottom:8px;">
+      <label><strong>Priority:</strong></label>
+      <select id="edit-priority">
+        <option value="Critical" ${journey.priority==="Critical"?"selected":""}>Critical</option>
+        <option value="Important" ${journey.priority==="Important"?"selected":""}>Important</option>
+        <option value="Next" ${journey.priority==="Next"?"selected":""}>Next</option>
+        <option value="Sometime Maybe" ${journey.priority==="Sometime Maybe"?"selected":""}>Sometime Maybe</option>
+      </select>
+    </div>
+    <div style="margin-bottom:8px;">
+      <label><strong>Schedule:</strong></label>
+      <span>${journey.startDate ? new Date(journey.startDate).toLocaleDateString("en-US", { weekday:"short", month:"short", year:"numeric" }) : "(unscheduled)"}</span>
+    </div>
+  `;
+  detailsContainer.appendChild(infoDiv);
+
+  infoDiv.querySelector("#edit-difficulty").addEventListener("change", async (e) => {
+    journey.difficulty = e.target.value;
+    console.log(`Difficulty for "${journey.title}" changed to ${journey.difficulty}.`);
+    await saveCallback(journeyData);
+    refreshTimelineCallback();
+    renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
+  });
+  infoDiv.querySelector("#edit-priority").addEventListener("change", async (e) => {
+    journey.priority = e.target.value;
+    console.log(`Priority for "${journey.title}" changed to ${journey.priority}.`);
+    await saveCallback(journeyData);
+    refreshTimelineCallback();
+    renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
+  });
+
+  // Podio/Zoho links (only for top-level journeys).
   if (!journey.parentId) {
     const linkEditorBtn = document.createElement("button");
     linkEditorBtn.classList.add("btn");
     linkEditorBtn.textContent = "Edit Podio/Zoho Links";
     detailsContainer.appendChild(linkEditorBtn);
-
     const linkEditorDiv = document.createElement("div");
     linkEditorDiv.style.display = "none";
     linkEditorDiv.innerHTML = `
@@ -52,74 +85,60 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
       <button id="save-links-btn" class="btn">Save Links</button>
     `;
     detailsContainer.appendChild(linkEditorDiv);
-
     linkEditorBtn.addEventListener("click", () => {
       linkEditorDiv.style.display = (linkEditorDiv.style.display === "block") ? "none" : "block";
-      console.log("Toggled Podio/Zoho link editor visibility.");
+      console.log("Toggled Podio/Zoho link editor.");
     });
-
     linkEditorDiv.querySelector("#save-links-btn").addEventListener("click", async () => {
       journey.podioLink = linkEditorDiv.querySelector("#podio-input").value.trim();
       journey.zohoLink = linkEditorDiv.querySelector("#zoho-input").value.trim();
-      console.log(`Saving Podio/Zoho links for journey "${journey.title}".`);
+      console.log(`Saved links for "${journey.title}".`);
       await saveCallback(journeyData);
       linkEditorDiv.style.display = "none";
       renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
     });
-
-    // Display existing links if available
     if (journey.podioLink || journey.zohoLink) {
       const linkDiv = document.createElement("div");
       linkDiv.classList.add("podio-zoho-links");
-      if (journey.podioLink) {
-        linkDiv.innerHTML += `<a href="${journey.podioLink}" target="_blank">Podio</a> `;
-      }
-      if (journey.zohoLink) {
-        linkDiv.innerHTML += `<a href="${journey.zohoLink}" target="_blank">Zoho</a>`;
-      }
+      if (journey.podioLink) linkDiv.innerHTML += `<a href="${journey.podioLink}" target="_blank">Podio</a> `;
+      if (journey.zohoLink) linkDiv.innerHTML += `<a href="${journey.zohoLink}" target="_blank">Zoho</a>`;
       detailsContainer.appendChild(linkDiv);
     }
   }
 
-  // Note Editing Section
+  // Note editing.
   const noteP = document.createElement("p");
   noteP.innerHTML = `<strong>Note:</strong> <span id="note-display">${journey.note || ""}</span>`;
   detailsContainer.appendChild(noteP);
-
   const editNoteBtn = document.createElement("button");
   editNoteBtn.classList.add("btn");
   editNoteBtn.textContent = "Edit Note";
   detailsContainer.appendChild(editNoteBtn);
-
   const noteInput = document.createElement("input");
   noteInput.classList.add("edit-note");
   noteInput.value = journey.note || "";
-  noteInput.style.display = "none";
   detailsContainer.appendChild(noteInput);
-
   editNoteBtn.addEventListener("click", () => {
     noteInput.style.display = "block";
     noteInput.focus();
-    console.log("Activated note editing mode.");
+    console.log("Note editing activated.");
   });
-
   noteInput.addEventListener("keydown", async (e) => {
     if (e.key === "Enter") {
       journey.note = noteInput.value.trim();
-      console.log(`Note updated for journey "${journey.title}": ${journey.note}`);
+      console.log(`Note for "${journey.title}" updated to: ${journey.note}`);
       await saveCallback(journeyData);
       renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
       refreshTimelineCallback();
     }
   });
 
-  // Mark as Complete Button (if not already completed)
+  // Mark as Complete for parent journey.
   if (!journey.completedDate) {
     const completeBtn = document.createElement("button");
     completeBtn.classList.add("btn");
     completeBtn.textContent = "Mark as Complete";
     detailsContainer.appendChild(completeBtn);
-
     completeBtn.addEventListener("click", async () => {
       const defaultDate = toYMD(new Date());
       const userDateStr = prompt("Enter completion date (YYYY-MM-DD):", defaultDate);
@@ -130,7 +149,7 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
         return;
       }
       journey.completedDate = compDate;
-      console.log(`Journey "${journey.title}" marked as complete on ${toYMD(compDate)}.`);
+      console.log(`Journey "${journey.title}" marked complete on ${toYMD(compDate)}.`);
       await saveCallback(journeyData);
       refreshTimelineCallback();
       renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
@@ -141,32 +160,45 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
     detailsContainer.appendChild(completeInfo);
   }
 
-  // Render Parent Gantt Chart
+  // Render Gantt chart.
   const ganttDiv = document.createElement("div");
   ganttDiv.innerHTML = renderGantt(journey);
   detailsContainer.appendChild(ganttDiv);
   bindApprovalCheckboxes(journey);
-  console.log(`Gantt chart rendered for journey "${journey.title}".`);
+  console.log(`Gantt chart rendered for "${journey.title}".`);
 
-  // Subjourney Management Section
+  // Extra schedule info (e.g. duration).
+  if (journey.startDate && journey.endDate) {
+    const duration = Math.ceil((new Date(journey.endDate) - new Date(journey.startDate) + 1) / (24*3600*1000));
+    const extraInfo = document.createElement("p");
+    extraInfo.innerHTML = `<strong>Duration:</strong> ${duration} days`;
+    detailsContainer.appendChild(extraInfo);
+  }
+
+  // --- Subjourney Management ---
   const subContainer = document.createElement("div");
   subContainer.classList.add("subjourneys-container");
   subContainer.innerHTML = "<h3>Subjourneys</h3>";
 
-  // Add Subjourney Button and Form
+  // Add Subjourney Form & Button.
   const addSubBtn = document.createElement("button");
   addSubBtn.classList.add("btn");
   addSubBtn.textContent = "Add Subjourney";
   subContainer.appendChild(addSubBtn);
-
   const subForm = document.createElement("div");
   subForm.style.display = "none";
   subForm.innerHTML = `
     <input type="text" id="subjourney-title" placeholder="Subjourney Title" />
     <select id="subjourney-difficulty">
-      <option value="easy">Easy</option>
-      <option value="medium">Medium</option>
-      <option value="hard">Hard</option>
+      <option value="Easy">Easy</option>
+      <option value="Medium">Medium</option>
+      <option value="Hard">Hard</option>
+    </select>
+    <select id="subjourney-priority">
+      <option value="Critical">Critical</option>
+      <option value="Important">Important</option>
+      <option value="Next">Next</option>
+      <option value="Sometime Maybe">Sometime Maybe</option>
     </select>
     <input type="text" id="subjourney-note" placeholder="Subjourney Note" />
     <input type="text" id="subjourney-podio" placeholder="Podio Link (optional)" />
@@ -178,21 +210,19 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
 
   addSubBtn.addEventListener("click", () => {
     subForm.style.display = (subForm.style.display === "none") ? "block" : "none";
-    console.log("Toggled subjourney add form visibility.");
+    console.log("Toggled subjourney add form.");
   });
-
   subForm.querySelector("#cancel-subjourney-btn").addEventListener("click", () => {
     subForm.style.display = "none";
-    console.log("Cancelled subjourney addition.");
+    console.log("Subjourney addition cancelled.");
   });
-
   subForm.querySelector("#save-subjourney-btn").addEventListener("click", async () => {
     const title = subForm.querySelector("#subjourney-title").value.trim();
     const difficulty = subForm.querySelector("#subjourney-difficulty").value;
+    const priority = subForm.querySelector("#subjourney-priority").value;
     const note = subForm.querySelector("#subjourney-note").value.trim();
     const podio = subForm.querySelector("#subjourney-podio").value.trim();
     const zoho = subForm.querySelector("#subjourney-zoho").value.trim();
-
     if (!title) {
       alert("Subjourney title is required.");
       return;
@@ -201,41 +231,56 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
       id: Date.now() + Math.random(),
       title,
       difficulty,
+      priority,
       note,
       podioLink: podio,
-      zohoLink: zoho
+      zohoLink: zoho,
+      completedDate: null,
+      _ganttVisible: false
     };
-    if (!journey.subJourneys) {
-      journey.subJourneys = [];
-    }
+    if (!journey.subJourneys) journey.subJourneys = [];
     journey.subJourneys.push(newSub);
-    console.log(`Added new subjourney "${title}" to journey "${journey.title}".`);
+    console.log(`Added subjourney "${title}" to "${journey.title}".`);
     await saveCallback(journeyData);
     subForm.style.display = "none";
     renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
   });
 
-  // Render existing subjourneys if any
+  // Render existing subjourneys.
   if (journey.subJourneys && journey.subJourneys.length > 0) {
     journey.subJourneys.forEach((sub, idx) => {
       const subItem = document.createElement("div");
-      subItem.classList.add("subjourney-item");
+      // Add a priority class based on sub.priority.
+      let subClass = "";
+      if (sub.priority === "Critical") subClass = "sub-critical";
+      else if (sub.priority === "Important") subClass = "sub-important";
+      else if (sub.priority === "Next") subClass = "sub-next";
+      else if (sub.priority === "Sometime Maybe") subClass = "sub-maybe";
+      subItem.classList.add("subjourney-item", subClass);
+      subItem.setAttribute("draggable", "true");
       subItem.style.marginBottom = "10px";
       subItem.innerHTML = `
         <strong>${sub.title}</strong>
-        <br><em>Difficulty:</em> ${sub.difficulty}
+        <span style="font-size:0.85rem;">[${sub.difficulty} | ${sub.priority}]</span>
         <br><em>Note:</em> <span class="sub-note-display">${sub.note}</span>
         <br>
         <button class="btn edit-sub">Edit</button>
         <button class="btn delete-sub" data-index="${idx}">Delete</button>
-        <button class="btn toggle-sub-gantt">Toggle Gantt</button>
-        <div class="sub-gantt" style="display:none;">${renderGantt(sub)}</div>
+        <button class="btn complete-sub">Mark Complete</button>
+        <button class="btn toggle-sub-gantt" title="Toggle Gantt">${sub._ganttVisible ? "▲" : "▼"}</button>
+        <div class="sub-gantt" style="display: ${sub._ganttVisible ? "block" : "none"};">${renderGantt(sub)}</div>
         <div class="edit-sub-form" style="display:none;">
           <input type="text" class="edit-sub-title" value="${sub.title}" />
           <select class="edit-sub-difficulty">
-            <option value="easy" ${sub.difficulty==="easy"?"selected":""}>Easy</option>
-            <option value="medium" ${sub.difficulty==="medium"?"selected":""}>Medium</option>
-            <option value="hard" ${sub.difficulty==="hard"?"selected":""}>Hard</option>
+            <option value="Easy" ${sub.difficulty==="Easy"?"selected":""}>Easy</option>
+            <option value="Medium" ${sub.difficulty==="Medium"?"selected":""}>Medium</option>
+            <option value="Hard" ${sub.difficulty==="Hard"?"selected":""}>Hard</option>
+          </select>
+          <select class="edit-sub-priority">
+            <option value="Critical" ${sub.priority==="Critical"?"selected":""}>Critical</option>
+            <option value="Important" ${sub.priority==="Important"?"selected":""}>Important</option>
+            <option value="Next" ${sub.priority==="Next"?"selected":""}>Next</option>
+            <option value="Sometime Maybe" ${sub.priority==="Sometime Maybe"?"selected":""}>Sometime Maybe</option>
           </select>
           <input type="text" class="edit-sub-note" value="${sub.note}" placeholder="Subjourney Note" />
           <input type="text" class="edit-sub-podio" value="${sub.podioLink||""}" placeholder="Podio Link" />
@@ -244,28 +289,54 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
           <button class="btn cancel-sub-edit btn-cancel">Cancel</button>
         </div>
       `;
-
-      // Delete subjourney event
+      // Enable drag-and-drop reordering for subjourneys.
+      subItem.addEventListener("dragstart", (e) => {
+        subItem.classList.add("dragging");
+        e.dataTransfer.setData("text/plain", idx);
+        console.log(`Started dragging subjourney "${sub.title}".`);
+      });
+      subItem.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        subItem.classList.add("drop-target");
+      });
+      subItem.addEventListener("dragleave", () => {
+        subItem.classList.remove("drop-target");
+      });
+      subItem.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        subItem.classList.remove("drop-target");
+        const fromIdx = parseInt(e.dataTransfer.getData("text/plain"), 10);
+        const toIdx = idx;
+        if (fromIdx === toIdx) return;
+        const [movedSub] = journey.subJourneys.splice(fromIdx, 1);
+        journey.subJourneys.splice(toIdx, 0, movedSub);
+        console.log(`Reordered subjourney "${movedSub.title}" from ${fromIdx} to ${toIdx}.`);
+        await saveCallback(journeyData);
+        renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
+      });
+      subItem.addEventListener("dragend", () => {
+        subItem.classList.remove("dragging");
+      });
+      // Delete subjourney.
       subItem.querySelector(".delete-sub").addEventListener("click", async () => {
         if (confirm("Delete this subjourney?")) {
           journey.subJourneys.splice(idx, 1);
-          console.log(`Deleted subjourney "${sub.title}" from journey "${journey.title}".`);
+          console.log(`Deleted subjourney "${sub.title}".`);
           await saveCallback(journeyData);
           renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
         }
       });
-
-      // Toggle edit form for subjourney
+      // Toggle edit form.
       subItem.querySelector(".edit-sub").addEventListener("click", () => {
-        const editForm = subItem.querySelector(".edit-sub-form");
-        editForm.style.display = (editForm.style.display === "none") ? "block" : "none";
+        const form = subItem.querySelector(".edit-sub-form");
+        form.style.display = (form.style.display === "none") ? "block" : "none";
         console.log(`Toggled edit form for subjourney "${sub.title}".`);
       });
-
-      // Save subjourney edit
+      // Save subjourney edits.
       subItem.querySelector(".save-sub-edit").addEventListener("click", async () => {
         const newTitle = subItem.querySelector(".edit-sub-title").value.trim();
         const newDiff = subItem.querySelector(".edit-sub-difficulty").value;
+        const newPriority = subItem.querySelector(".edit-sub-priority").value;
         const newNote = subItem.querySelector(".edit-sub-note").value.trim();
         const newPodio = subItem.querySelector(".edit-sub-podio").value.trim();
         const newZoho = subItem.querySelector(".edit-sub-zoho").value.trim();
@@ -275,31 +346,55 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
         }
         sub.title = newTitle;
         sub.difficulty = newDiff;
+        sub.priority = newPriority;
         sub.note = newNote;
         sub.podioLink = newPodio;
         sub.zohoLink = newZoho;
-        console.log(`Updated subjourney "${newTitle}" in journey "${journey.title}".`);
+        console.log(`Updated subjourney "${newTitle}".`);
         await saveCallback(journeyData);
         renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
       });
-
-      // Cancel subjourney edit
       subItem.querySelector(".cancel-sub-edit").addEventListener("click", () => {
         subItem.querySelector(".edit-sub-form").style.display = "none";
         console.log(`Cancelled edit for subjourney "${sub.title}".`);
       });
-
-      // Toggle collapsible Gantt for subjourney
+      // Mark subjourney as complete.
+      subItem.querySelector(".complete-sub").addEventListener("click", async () => {
+        if (!sub.completedDate) {
+          const defaultDate = toYMD(new Date());
+          const userDate = prompt("Enter completion date for subjourney (YYYY-MM-DD):", defaultDate);
+          if (!userDate) return;
+          const compDate = parseDate(userDate);
+          if (isNaN(compDate.getTime())) {
+            alert("Invalid date.");
+            return;
+          }
+          sub.completedDate = compDate;
+          console.log(`Subjourney "${sub.title}" marked complete on ${toYMD(compDate)}.`);
+          await saveCallback(journeyData);
+          renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
+        } else {
+          alert("Subjourney already marked complete.");
+        }
+      });
+      // Toggle Gantt chart using an icon.
       subItem.querySelector(".toggle-sub-gantt").addEventListener("click", () => {
         const subGanttDiv = subItem.querySelector(".sub-gantt");
-        subGanttDiv.style.display = (subGanttDiv.style.display === "none") ? "block" : "none";
-        console.log(`Toggled Gantt chart visibility for subjourney "${sub.title}".`);
+        const btn = subItem.querySelector(".toggle-sub-gantt");
+        if (subGanttDiv.style.display === "none") {
+          subGanttDiv.style.display = "block";
+          btn.textContent = "▲";
+          sub._ganttVisible = true;
+        } else {
+          subGanttDiv.style.display = "none";
+          btn.textContent = "▼";
+          sub._ganttVisible = false;
+        }
+        console.log(`Toggled Gantt for subjourney "${sub.title}".`);
       });
-
       subContainer.appendChild(subItem);
     });
   }
-
   detailsContainer.appendChild(subContainer);
-  console.log(`Subjourney section rendered for journey "${journey.title}".`);
+  console.log(`Subjourney section rendered for "${journey.title}".`);
 }
