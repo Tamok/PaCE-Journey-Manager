@@ -2,14 +2,10 @@
  * app.js
  *
  * Main entry point for PaCE Journey Manager.
- * Loads journey data from Firestore (or default data), schedules journeys,
- * renders the timeline and detailed view, and enables configuration save/download/upload.
- *
- * Author: Your Name
- * Date: YYYY-MM-DD
+ * Now loads dynamically generated UCSB holidays/breaks at startup.
  */
 
-import { scheduleJourneys, toYMD } from "./scheduler.js";
+import { scheduleJourneys, toYMD, setHolidays } from "./scheduler.js";
 import { renderTimeline } from "./timeline.js";
 import { renderJourneyDetails } from "./journeyDetails.js";
 import {
@@ -17,6 +13,9 @@ import {
   saveJourneysToFirestore,
   resetToDefaultData
 } from "./db.js";
+
+// Import the holiday generator
+import { generateUCSBHolidaysAndBreaks } from "./holidayGenerator.js";
 
 const timelineContainer = document.getElementById("timeline-container");
 const resetDefaultBtn = document.getElementById("reset-default-btn");
@@ -29,8 +28,7 @@ const uploadConfigBtn = document.getElementById("upload-config-btn");
 let journeyData = [];
 
 /**
- * Renders detailed view for the selected journey.
- * @param {number} index - Index in journeyData.
+ * Renders details for the selected journey.
  */
 function renderDetails(index) {
   const journey = journeyData[index];
@@ -47,7 +45,7 @@ function renderAppTimeline() {
 }
 
 /**
- * Loads journey data from Firestore; resets to default if empty.
+ * Loads journey data from Firestore; if empty, resets to default.
  */
 async function loadJourneyData() {
   try {
@@ -78,7 +76,7 @@ async function saveJourneyData() {
 }
 
 /**
- * Resets journey data to default and saves to Firestore.
+ * Resets journey data to default and saves.
  */
 async function resetJourneyDataToDefault() {
   try {
@@ -91,19 +89,16 @@ async function resetJourneyDataToDefault() {
   }
 }
 
-// Reset Configuration button.
 if (resetDefaultBtn) {
   resetDefaultBtn.addEventListener("click", async () => {
     if (confirm("Are you sure you want to reset data? This action cannot be undone.")) {
       await resetJourneyDataToDefault();
     }
   });
-} else {
-  console.warn("Reset button not found in DOM.");
 }
 
 /**
- * Handles Add Journey form.
+ * Handles the Add Journey form.
  */
 if (addJourneyBtn && addJourneyForm) {
   addJourneyBtn.addEventListener("click", () => {
@@ -131,7 +126,7 @@ if (addJourneyBtn && addJourneyForm) {
       title,
       priority: prio,
       priorityNumber: (prio === "Critical") ? subPrio : null,
-      difficulty: diff,
+      difficulty: diff.charAt(0).toUpperCase() + diff.slice(1), // ensure "Easy"/"Medium"/"Hard"
       note,
       podioLink: podio,
       zohoLink: zoho,
@@ -151,12 +146,10 @@ if (addJourneyBtn && addJourneyForm) {
     addJourneyForm.style.display = "none";
     renderAppTimeline();
   });
-} else {
-  console.warn("Add Journey elements not found in DOM.");
 }
 
 /**
- * Save Configuration button handler.
+ * Save config button handler.
  */
 if (saveConfigBtn) {
   saveConfigBtn.addEventListener("click", async () => {
@@ -166,7 +159,7 @@ if (saveConfigBtn) {
 }
 
 /**
- * Download Configuration button handler.
+ * Download config button handler.
  */
 if (downloadConfigBtn) {
   downloadConfigBtn.addEventListener("click", () => {
@@ -179,7 +172,7 @@ if (downloadConfigBtn) {
 }
 
 /**
- * Upload Configuration handler.
+ * Upload config button handler.
  */
 if (uploadConfigBtn) {
   uploadConfigBtn.addEventListener("click", () => {
@@ -205,7 +198,19 @@ if (uploadConfigBtn) {
   });
 }
 
+/**
+ * Main initialization function: 
+ * 1) Generate and set holidays/breaks 
+ * 2) Load journey data 
+ * 3) Render timeline
+ */
 (async function initApp() {
   console.log("Initializing PaCE Journey Manager...");
+
+  // Generate UCSB holidays/breaks for the relevant range
+  const generatedHolidays = generateUCSBHolidaysAndBreaks(2024, 2028);
+  setHolidays(generatedHolidays);
+
+  // Load journey data from Firestore or default
   await loadJourneyData();
 })();

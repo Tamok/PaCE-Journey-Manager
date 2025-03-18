@@ -3,22 +3,33 @@
  *
  * Provides utility functions for scheduling journeys,
  * including date calculations, holiday detection, and sorting.
- *
- * Author: Your Name
- * Date: YYYY-MM-DD
+ * The static HOLIDAYS array has been removed; we now rely on setHolidays() / getHolidays()
+ * to store and retrieve a dynamically generated holiday/break list.
  */
 
-export const HOLIDAYS = [
-  { date: "2025-03-17", name: "St. Patrick's Day" },
-  { date: "2025-04-01", name: "April Fool's Day" },
-  { date: "2025-03-31", name: "Cesar Chavez Day" },
-  { date: "2025-04-14", name: "UCSB Spring Break" }
-];
+let HOLIDAYS = [];
 
 /**
- * Checks if a given date is a holiday.
+ * Replaces the current in‑memory holidays/breaks with the provided array.
+ * @param {Array} holidayArray - Array of objects [{ date: "YYYY-MM-DD", name: "Holiday" }, ...].
+ */
+export function setHolidays(holidayArray) {
+  HOLIDAYS = holidayArray;
+  console.log(`Holidays/Breaks stored in memory: ${HOLIDAYS.length} entries.`);
+}
+
+/**
+ * Retrieves the in‑memory list of holidays/breaks.
+ * @returns {Array} The array of holiday objects.
+ */
+export function getHolidays() {
+  return HOLIDAYS;
+}
+
+/**
+ * Checks if a given date is in the holiday list.
  * @param {Date} date - The date to check.
- * @returns {boolean} True if the date is a holiday.
+ * @returns {boolean} True if the date is a holiday or break day.
  */
 function isHoliday(date) {
   const ymd = toYMD(date);
@@ -47,7 +58,7 @@ export function toYMD(date) {
 }
 
 /**
- * Adds a number of days to a date.
+ * Adds a number of days to a date (does not skip weekends/holidays).
  * @param {Date} date - The base date.
  * @param {number} n - Number of days.
  * @returns {Date} New date.
@@ -68,7 +79,7 @@ export function isWeekend(date) {
 }
 
 /**
- * Returns the next business day, skipping weekends and holidays.
+ * Returns the next business day, skipping weekends and any holiday/break days.
  * @param {Date} date - Starting date.
  * @returns {Date} Next business day.
  */
@@ -84,7 +95,7 @@ export function getNextBusinessDay(date) {
  * Returns task duration (in days) based on difficulty.
  * Difficulties are capitalized ("Easy", "Medium", "Hard").
  * @param {string} difficulty - Difficulty.
- * @returns {number} Duration.
+ * @returns {number} Duration (days).
  */
 export function getDuration(difficulty) {
   if (difficulty === "Easy") return 30;
@@ -97,24 +108,21 @@ const priorityOrder = {
   "Critical": 1,
   "Important": 2,
   "Next": 3,
-  "Sometime Maybe": 4,
-  "Child": 5
+  "Sometime Maybe": 4
 };
 
 /**
  * Sorts journeys by:
- * - Placing completed journeys first,
- * - then by explicit order if set,
- * - then by priority (using priorityOrder),
- * - and for Critical journeys, using priorityNumber (defaulting to 0 if absent).
- * @param {Array} journeyData - Array of journeys.
+ * 1) Completed journeys first,
+ * 2) then explicit order if set,
+ * 3) then by priority,
+ * 4) for Critical journeys, uses priorityNumber if present.
+ * @param {Array} journeyData - The array of journeys.
  */
 export function sortJourneys(journeyData) {
   journeyData.sort((a, b) => {
-    // Completed journeys come first.
     if (a.completedDate && !b.completedDate) return -1;
     if (!a.completedDate && b.completedDate) return 1;
-    // Next, explicit order.
     if (typeof a.order === "number" && typeof b.order === "number") {
       return a.order - b.order;
     } else if (typeof a.order === "number") {
@@ -122,11 +130,9 @@ export function sortJourneys(journeyData) {
     } else if (typeof b.order === "number") {
       return 1;
     }
-    // Then by priority.
     const pa = priorityOrder[a.priority] || 99;
     const pb = priorityOrder[b.priority] || 99;
     if (pa !== pb) return pa - pb;
-    // For Critical journeys, sort by priorityNumber (default to 0 if missing).
     if (a.priority === "Critical") {
       const na = (a.priorityNumber !== undefined && a.priorityNumber !== null) ? a.priorityNumber : 0;
       const nb = (b.priorityNumber !== undefined && b.priorityNumber !== null) ? b.priorityNumber : 0;
@@ -136,12 +142,16 @@ export function sortJourneys(journeyData) {
   });
 }
 
+/**
+ * Base date for scheduling (example).
+ * Adjust as needed or remove if not used.
+ */
 export const BASE_START_DATE = new Date("2025-03-03");
 
 /**
  * Schedules journeys by assigning start and end dates.
  * Child journeys are scheduled relative to their parent's start date.
- * @param {Array} journeyData - Array of journeys.
+ * @param {Array} journeyData - The array of journeys.
  */
 export function scheduleJourneys(journeyData) {
   sortJourneys(journeyData);

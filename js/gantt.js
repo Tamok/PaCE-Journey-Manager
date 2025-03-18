@@ -11,7 +11,7 @@
  * Date: YYYY-MM-DD
  */
 
-import { addDays, toYMD, HOLIDAYS } from "./scheduler.js";
+import { addDays, toYMD, getHolidays } from "./scheduler.js";
 
 // Base Task Rows Definition
 const baseTaskRows = [
@@ -191,7 +191,7 @@ export function renderGantt(journey) {
       let weekEnd = addDays(weekStart, 6);
       
       // Filter holidays for this week (HOLIDAYS now contains objects with date and name)
-      let holidaysThisWeek = HOLIDAYS.filter(h => {
+      let holidaysThisWeek = getHolidays().filter(h => {
         let hDate = new Date(h.date);
         return hDate >= weekStart && hDate <= weekEnd;
       });
