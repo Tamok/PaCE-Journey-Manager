@@ -2,14 +2,13 @@
  * timeline.js
  *
  * Renders the timeline for top-level journeys with drag-and-drop reordering.
- * Each timeline circle shows only the month and year (with a tooltip showing full date).
+ * Each timeline circle shows only the month and year (with a tooltip showing the full date).
  *
  * Author: Your Name
  * Date: YYYY-MM-DD
  */
 
-import { toYMD } from "./scheduler.js";
-import { scheduleJourneys } from "./scheduler.js";
+import { toYMD, scheduleJourneys } from "./scheduler.js";
 
 /**
  * Renders the timeline.
@@ -29,7 +28,8 @@ export function renderTimeline(journeyData, timelineContainer, renderDetailsCall
     else if (j.priority === "Important") item.classList.add("important");
     else if (j.priority === "Next") item.classList.add("next");
     else if (j.priority === "Sometime Maybe") item.classList.add("maybe");
-    item.setAttribute("draggable", "true");
+    // Disable dragging for completed journeys.
+    if (!j.completedDate) item.setAttribute("draggable", "true");
     const startDate = j.startDate ? new Date(j.startDate) : null;
     const startStr = startDate ? startDate.toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "";
     const fullDate = startDate ? startDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) : "";
@@ -43,6 +43,10 @@ export function renderTimeline(journeyData, timelineContainer, renderDetailsCall
       renderDetailsCallback(index);
     });
     item.addEventListener("dragstart", (e) => {
+      if (j.completedDate) {
+        e.preventDefault();
+        return;
+      }
       timelineContainer.dragSrcEl = item;
       e.dataTransfer.effectAllowed = "move";
       console.log(`Started dragging journey "${j.title}".`);
@@ -63,10 +67,21 @@ export function renderTimeline(journeyData, timelineContainer, renderDetailsCall
         const children = [...timelineContainer.children];
         const fromIndex = children.indexOf(dragSrcEl);
         const toIndex = children.indexOf(item);
+        const movedJourney = journeyData[fromIndex];
+        if (movedJourney.completedDate) {
+          console.log(`Journey "${movedJourney.title}" is completed and immovable.`);
+          return;
+        }
         const [moved] = journeyData.splice(fromIndex, 1);
         journeyData.splice(toIndex, 0, moved);
         journeyData.forEach((journey, idx) => { journey.order = idx; });
-        console.log(`Reordered journey "${moved.title}" from ${fromIndex} to ${toIndex}.`);
+        // Update priority based on new position.
+        if (toIndex > 0) {
+          moved.priority = journeyData[toIndex - 1].priority;
+        } else if (journeyData.length > 1) {
+          moved.priority = journeyData[1].priority;
+        }
+        console.log(`Reordered journey "${moved.title}" from ${fromIndex} to ${toIndex} with new priority ${moved.priority}.`);
         renderTimeline(journeyData, timelineContainer, renderDetailsCallback);
         item.classList.add("active");
         renderDetailsCallback(toIndex);

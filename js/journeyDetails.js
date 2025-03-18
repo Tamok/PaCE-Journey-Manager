@@ -2,11 +2,11 @@
  * journeyDetails.js
  *
  * Renders the detailed view for a journey.
- * Displays title, dropdowns for difficulty and priority (without duplicate text),
- * schedule information (formatted as "Monday, March 2"), slick Podio/Zoho link editing,
- * note editing, and a repositioned "Mark as Complete" button in the top right.
- * Also manages subjourneys – which are draggable, allow editing of difficulty/priority,
- * display their links if set, and can be marked complete.
+ * Displays the journey title, dropdowns for difficulty and priority,
+ * schedule information (start date, end date, duration), link editing (Podio/Zoho),
+ * note editing, and a repositioned "Mark as Complete" button.
+ * Also manages subjourneys – which are draggable with enhanced visual cues,
+ * allow editing of difficulty/priority, display their links if set, and can be marked complete.
  *
  * Exports:
  *   renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback)
@@ -15,19 +15,25 @@
 import { renderGantt, bindApprovalCheckboxes } from "./gantt.js";
 import { toYMD, parseDate } from "./scheduler.js";
 
+/**
+ * Renders the detailed view for the selected journey.
+ * @param {Object} journey - The journey object to display.
+ * @param {Array} journeyData - The complete array of journeys.
+ * @param {Function} saveCallback - Callback to save journeyData.
+ * @param {Function} refreshTimelineCallback - Callback to re-render the timeline.
+ */
 export function renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback) {
   const detailsContainer = document.getElementById("details-container");
   detailsContainer.innerHTML = "";
   console.log(`Rendering details for journey: ${journey.title}`);
 
-  // Container for header elements (title and complete button)
+  // Header: Title and "Mark as Complete" button or completion info.
   const headerDiv = document.createElement("div");
   headerDiv.style.position = "relative";
   headerDiv.classList.add("journey-header");
   headerDiv.innerHTML = `<h2>${journey.title}</h2>`;
   detailsContainer.appendChild(headerDiv);
 
-  // "Mark as Complete" button positioned in the top right
   if (!journey.completedDate) {
     const completeBtn = document.createElement("button");
     completeBtn.classList.add("btn");
@@ -57,9 +63,16 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
     headerDiv.appendChild(completeInfo);
   }
 
-  // Editable dropdowns for difficulty and priority.
+  // Info section: Difficulty, Priority and Schedule details.
   const infoDiv = document.createElement("div");
   infoDiv.style.marginBottom = "8px";
+  let scheduleInfo = "(unscheduled)";
+  if (journey.startDate && journey.endDate) {
+    const startStr = new Date(journey.startDate).toLocaleDateString();
+    const endStr = new Date(journey.endDate).toLocaleDateString();
+    const duration = Math.ceil((new Date(journey.endDate) - new Date(journey.startDate) + 1) / (24 * 3600 * 1000));
+    scheduleInfo = `Start: ${startStr}, End: ${endStr}, Duration: ${duration} days`;
+  }
   infoDiv.innerHTML = `
     <div style="margin-bottom:8px;">
       <label><strong>Difficulty:</strong></label>
@@ -80,7 +93,7 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
     </div>
     <div style="margin-bottom:8px;">
       <label><strong>Schedule:</strong></label>
-      <span>${journey.startDate ? new Date(journey.startDate).toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric" }) : "(unscheduled)"}</span>
+      <span>${scheduleInfo}</span>
     </div>
   `;
   detailsContainer.appendChild(infoDiv);
@@ -100,7 +113,7 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
     renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
   });
 
-  // Podio/Zoho links (for top-level journeys).
+  // Podio/Zoho links editor (for top-level journeys).
   if (!journey.parentId) {
     const linkEditorBtn = document.createElement("button");
     linkEditorBtn.classList.add("btn");
@@ -176,20 +189,12 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
   bindApprovalCheckboxes(journey);
   console.log(`Gantt chart rendered for "${journey.title}".`);
 
-  // Extra schedule info.
-  if (journey.startDate && journey.endDate) {
-    const duration = Math.ceil((new Date(journey.endDate) - new Date(journey.startDate) + 1) / (24 * 3600 * 1000));
-    const extraInfo = document.createElement("p");
-    extraInfo.innerHTML = `<strong>Duration:</strong> ${duration} days`;
-    detailsContainer.appendChild(extraInfo);
-  }
-
-  // --- Subjourney Management ---
+  // --- Subjourney Management Section ---
   const subContainer = document.createElement("div");
   subContainer.classList.add("subjourneys-container");
   subContainer.innerHTML = "<h3>Subjourneys</h3>";
 
-  // Add Subjourney Form & Button.
+  // Add Subjourney Form & Toggle Button.
   const addSubBtn = document.createElement("button");
   addSubBtn.classList.add("btn");
   addSubBtn.style.fontSize = "0.9rem";
@@ -265,7 +270,8 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
       else if (sub.priority === "Next") subClass = "sub-next";
       else if (sub.priority === "Sometime Maybe") subClass = "sub-sometime";
       subItem.classList.add("subjourney-item", subClass);
-      subItem.setAttribute("draggable", "true");
+      // Disable dragging if subjourney is completed.
+      if (!sub.completedDate) subItem.setAttribute("draggable", "true");
       subItem.style.marginBottom = "10px";
       subItem.innerHTML = `
         <strong>${sub.title}</strong>
@@ -300,13 +306,17 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
           <button class="btn cancel-sub-edit btn-cancel" style="font-size:0.8rem;">Cancel</button>
         </div>
       `;
-      // Render links for subjourney if set.
+      // Render links if present.
       const subLinksDiv = subItem.querySelector(".sub-links");
       if (sub.podioLink) subLinksDiv.innerHTML += `<a href="${sub.podioLink}" target="_blank">Podio</a> `;
       if (sub.zohoLink) subLinksDiv.innerHTML += `<a href="${sub.zohoLink}" target="_blank">Zoho</a>`;
       
-      // Drag-and-drop reordering.
+      // Drag-and-drop for subjourneys.
       subItem.addEventListener("dragstart", (e) => {
+        if (sub.completedDate) {
+          e.preventDefault();
+          return;
+        }
         subItem.classList.add("dragging");
         e.dataTransfer.setData("text/plain", idx);
         console.log(`Started dragging subjourney "${sub.title}".`);
@@ -324,15 +334,27 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
         const fromIdx = parseInt(e.dataTransfer.getData("text/plain"), 10);
         const toIdx = idx;
         if (fromIdx === toIdx) return;
-        const [movedSub] = journey.subJourneys.splice(fromIdx, 1);
-        journey.subJourneys.splice(toIdx, 0, movedSub);
-        console.log(`Reordered subjourney "${movedSub.title}" from ${fromIdx} to ${toIdx}.`);
+        const movedSub = journey.subJourneys[fromIdx];
+        if (movedSub.completedDate) {
+          console.log(`Subjourney "${movedSub.title}" is completed and immovable.`);
+          return;
+        }
+        const [movedSubArr] = journey.subJourneys.splice(fromIdx, 1);
+        journey.subJourneys.splice(toIdx, 0, movedSubArr);
+        // Update subjourney priority based on new position.
+        if (toIdx > 0) {
+          movedSubArr.priority = journey.subJourneys[toIdx - 1].priority;
+        } else if (journey.subJourneys.length > 1) {
+          movedSubArr.priority = journey.subJourneys[1].priority;
+        }
+        console.log(`Reordered subjourney "${movedSubArr.title}" from ${fromIdx} to ${toIdx} with new priority ${movedSubArr.priority}.`);
         await saveCallback(journeyData);
         renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
       });
       subItem.addEventListener("dragend", () => {
         subItem.classList.remove("dragging");
       });
+      
       // Delete subjourney.
       subItem.querySelector(".delete-sub").addEventListener("click", async () => {
         if (confirm("Delete this subjourney?")) {
@@ -342,12 +364,14 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
           renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
         }
       });
+      
       // Toggle edit form.
       subItem.querySelector(".edit-sub").addEventListener("click", () => {
         const form = subItem.querySelector(".edit-sub-form");
         form.style.display = (form.style.display === "none") ? "block" : "none";
         console.log(`Toggled edit form for subjourney "${sub.title}".`);
       });
+      
       // Save subjourney edits.
       subItem.querySelector(".save-sub-edit").addEventListener("click", async () => {
         const newTitle = subItem.querySelector(".edit-sub-title").value.trim();
@@ -370,44 +394,13 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
         await saveCallback(journeyData);
         renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
       });
+      
+      // Cancel subjourney edit.
       subItem.querySelector(".cancel-sub-edit").addEventListener("click", () => {
         subItem.querySelector(".edit-sub-form").style.display = "none";
         console.log(`Cancelled edit for subjourney "${sub.title}".`);
       });
-      // Mark subjourney as complete.
-      subItem.querySelector(".complete-sub").addEventListener("click", async () => {
-        if (!sub.completedDate) {
-          const defaultDate = toYMD(new Date());
-          const userDate = prompt("Enter completion date for subjourney (YYYY-MM-DD):", defaultDate);
-          if (!userDate) return;
-          const compDate = parseDate(userDate);
-          if (isNaN(compDate.getTime())) {
-            alert("Invalid date.");
-            return;
-          }
-          sub.completedDate = compDate;
-          console.log(`Subjourney "${sub.title}" marked complete on ${toYMD(compDate)}.`);
-          await saveCallback(journeyData);
-          renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
-        } else {
-          alert("Subjourney already marked complete.");
-        }
-      });
-      // Toggle Gantt chart using an icon.
-      subItem.querySelector(".toggle-sub-gantt").addEventListener("click", () => {
-        const subGanttDiv = subItem.querySelector(".sub-gantt");
-        const btn = subItem.querySelector(".toggle-sub-gantt");
-        if (subGanttDiv.style.display === "none") {
-          subGanttDiv.style.display = "block";
-          btn.textContent = "▲";
-          sub._ganttVisible = true;
-        } else {
-          subGanttDiv.style.display = "none";
-          btn.textContent = "▼";
-          sub._ganttVisible = false;
-        }
-        console.log(`Toggled Gantt for subjourney "${sub.title}".`);
-      });
+      
       subContainer.appendChild(subItem);
     });
   }

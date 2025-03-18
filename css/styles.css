@@ -25,7 +25,8 @@ body {
   --important-color: #febc11;   /* UCSB Gold */
   --next-color: #1178b5;        /* PaCE Secondary */
   --maybe-color: #999;          /* Sometime Maybe */
-  /* For subjourneys, use lower opacity fill */
+  --ucs-blue: #003660;          /* UCSB blue for text consistency */
+  /* For fills, if needed */
   --critical-fill: rgba(0,54,96,0.2);
   --important-fill: rgba(254,188,17,0.2);
   --next-fill: rgba(17,120,181,0.2);
@@ -64,16 +65,16 @@ body {
   margin-right: 3px;
 }
 
-/* Style dropdown menus */
-select {
+/* Dropdowns & Form elements */
+select,
+input[type="text"],
+input[type="number"] {
   padding: 6px;
   border: 1px solid var(--border-gray);
   border-radius: 3px;
   background: #fff;
   font-size: 0.9rem;
 }
-
-/* Add Journey Form */
 #add-journey-form {
   display: none;
   background: #fff;
@@ -86,16 +87,12 @@ select {
   display: block;
   margin: 10px 0 5px;
 }
-#add-journey-form input[type="text"],
-#add-journey-form input[type="number"],
+#add-journey-form input,
 #add-journey-form select {
   width: 100%;
   max-width: 400px;
-  padding: 8px;
   margin-top: 2px;
   margin-bottom: 10px;
-  border: 1px solid var(--border-gray);
-  border-radius: 3px;
 }
 
 /* Timeline Container & Bubbles */
@@ -104,8 +101,7 @@ select {
   gap: 10px;
   margin-bottom: 30px;
   overflow-x: auto;
-  overflow-y: visible;
-  padding: 20px 20px; /* extra horizontal padding */
+  padding: 20px;
 }
 .horizontal-scroll::-webkit-scrollbar {
   height: 8px;
@@ -132,24 +128,31 @@ select {
   cursor: move;
   user-select: none;
   border: 3px solid;
-  /* Border color set per priority */
   background: #fff;
-  color: #333;
+  /* Keep text color consistently UCSB blue */
+  color: var(--ucs-blue);
   transition: transform 0.3s ease, background 0.3s ease;
   position: relative;
 }
-.timeline-item.drop-target {
-  border: 3px dashed var(--important-color);
+.timeline-item.critical { 
+  border-color: var(--critical-color); 
+}
+.timeline-item.important { 
+  border-color: var(--important-color); 
+}
+.timeline-item.next { 
+  border-color: var(--next-color); 
+}
+.timeline-item.maybe { 
+  border-color: var(--maybe-color); 
 }
 .timeline-item:hover {
   transform: scale(1.1);
   background: var(--light-gray);
 }
-/* Active state: use low-opacity fill corresponding to priority */
-.timeline-item.critical.active { background: var(--critical-fill); color: var(--critical-color); }
-.timeline-item.important.active { background: var(--important-fill); color: var(--important-color); }
-.timeline-item.next.active { background: var(--next-fill); color: var(--next-color); }
-.timeline-item.maybe.active { background: var(--maybe-fill); color: var(--maybe-color); }
+.timeline-item.active {
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
 .timeline-item.completed {
   border-color: #999;
   background: #ccc;
@@ -164,24 +167,6 @@ select {
   font-size: 24px;
   color: green;
 }
-.timeline-item strong {
-  font-size: 1rem;
-  margin-bottom: 5px;
-}
-.timeline-item span {
-  font-size: 0.9rem;
-}
-
-/* Subjourney items: colored left accent based on priority */
-.subjourney-item {
-  border-left: 4px solid;
-  padding-left: 8px;
-  margin-bottom: 8px;
-}
-.subjourney-item.sub-critical { border-color: var(--critical-color); }
-.subjourney-item.sub-important { border-color: var(--important-color); }
-.subjourney-item.sub-next { border-color: var(--next-color); }
-.subjourney-item.sub-sometime { border-color: var(--maybe-color); }
 
 /* Details Container */
 #details-container {
@@ -236,13 +221,24 @@ select {
   white-space: nowrap;
   min-width: 70px;
 }
-.gantt-table th { background: #f0f0f0; }
-.gantt-active { background: #8bd0ff; }
-.gantt-holiday { background: #ffb5b5; cursor: help; }
-.gantt-current { outline: 2px solid red; }
-.gantt-holiday-full { background: #ffb5b5; }
+.gantt-table th {
+  background: #f0f0f0;
+}
+.gantt-active {
+  background: #8bd0ff;
+}
+.gantt-holiday {
+  background: #ffb5b5;
+  cursor: help;
+}
+.gantt-holiday-full {
+  background: #ffb5b5;
+}
+.gantt-current {
+  outline: 2px solid red;
+}
 
-/* Dependency highlight on hover */
+/* Dependency highlight */
 .dependency-highlight {
   background: #ffffcc !important;
 }
@@ -292,4 +288,6 @@ select {
   z-index: 100;
   transition: background 0.3s ease;
 }
-#reset-default-btn:hover { background: #900; }
+#reset-default-btn:hover {
+  background: #900;
+}
