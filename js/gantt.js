@@ -3,9 +3,10 @@
  *
  * Renders the Gantt chart for a journey and binds approval checkbox events.
  * Non-approval tasks are scaled based on difficulty.
- * Holidays are marked in the chart:
- * - If an entire week is off, the cell gets the "gantt-holiday-full" class.
- * - If only part of the week is affected, a marker with a tooltip (showing date and holiday name) is added.
+ * Holidays are marked on the chart:
+ *  - If an entire week is off, the cell gets the "gantt-holiday-full" class.
+ *  - If only part of the week is affected, a tooltip is added with holiday details.
+ * The current week (based on today's date) is highlighted on active task cells.
  *
  * Author: Your Name
  * Date: YYYY-MM-DD
@@ -13,109 +14,27 @@
 
 import { addDays, toYMD, getHolidays } from "./scheduler.js";
 
-// Base Task Rows Definition
+/**
+ * Base Task Rows Definition
+ */
 const baseTaskRows = [
-  // Non-approval tasks
-  {
-    name: "Diagram Building",
-    startWeek: 1,
-    endWeek: 1,
-    dependencies: [],
-    isApproval: false
-  },
-  {
-    name: "Content Creation",
-    startWeek: 1,
-    endWeek: 1,
-    dependencies: [],
-    isApproval: false
-  },
-  {
-    name: "Creative Development",
-    startWeek: 1,
-    endWeek: 1,
-    dependencies: [],
-    isApproval: false
-  },
-  {
-    name: "Initial Email Template (Zoho)",
-    startWeek: 1,
-    endWeek: 1,
-    dependencies: ["Creative Development"],
-    isApproval: false
-  },
-  // Approval tasks (fixed at 2 weeks)
-  {
-    name: "PM Approval",
-    startWeek: 2,
-    endWeek: 2,
-    dependencies: [],
-    isApproval: true
-  },
-  {
-    name: "Sheetal Approval",
-    startWeek: 2,
-    endWeek: 2,
-    dependencies: ["PM Approval"],
-    isApproval: true
-  },
-  {
-    name: "Paolo Approval",
-    startWeek: 3,
-    endWeek: 3,
-    dependencies: ["Sheetal Approval"],
-    isApproval: true
-  },
-  {
-    name: "Denis Approval",
-    startWeek: 3,
-    endWeek: 3,
-    dependencies: ["Paolo Approval"],
-    isApproval: true
-  },
-  // Overlapping tasks
-  {
-    name: "Zoho Workflow Building (Diagram)",
-    startWeek: 2,
-    endWeek: 2,
-    dependencies: ["Diagram Building", "PM Approval"],
-    isApproval: false
-  },
-  {
-    name: "Email Template Revision (Zoho)",
-    startWeek: 3,
-    endWeek: 3,
-    dependencies: ["Creative Development", "Paolo Approval", "Denis Approval"],
-    isApproval: false
-  },
-  {
-    name: "Workflow Linking / Logic",
-    startWeek: 3,
-    endWeek: 3,
-    dependencies: ["Email Template Revision"],
-    isApproval: false
-  },
-  // Final tasks
-  {
-    name: "Final Template Revision",
-    startWeek: 4,
-    endWeek: 4,
-    dependencies: ["Denis Approval"],
-    isApproval: false
-  },
-  {
-    name: "Project Wrap-Up & Check-In",
-    startWeek: 4,
-    endWeek: 4,
-    dependencies: [],
-    isApproval: false
-  }
+  { name: "Diagram Building", startWeek: 1, endWeek: 1, dependencies: [], isApproval: false },
+  { name: "Content Creation", startWeek: 1, endWeek: 1, dependencies: [], isApproval: false },
+  { name: "Creative Development", startWeek: 1, endWeek: 1, dependencies: [], isApproval: false },
+  { name: "Initial Email Template (Zoho)", startWeek: 1, endWeek: 1, dependencies: ["Creative Development"], isApproval: false },
+  { name: "PM Approval", startWeek: 2, endWeek: 2, dependencies: [], isApproval: true },
+  { name: "Sheetal Approval", startWeek: 2, endWeek: 2, dependencies: ["PM Approval"], isApproval: true },
+  { name: "Paolo Approval", startWeek: 3, endWeek: 3, dependencies: ["Sheetal Approval"], isApproval: true },
+  { name: "Denis Approval", startWeek: 3, endWeek: 3, dependencies: ["Paolo Approval"], isApproval: true },
+  { name: "Zoho Workflow Building (Diagram)", startWeek: 2, endWeek: 2, dependencies: ["Diagram Building", "PM Approval"], isApproval: false },
+  { name: "Email Template Revision (Zoho)", startWeek: 3, endWeek: 3, dependencies: ["Creative Development", "Paolo Approval", "Denis Approval"], isApproval: false },
+  { name: "Workflow Linking / Logic", startWeek: 3, endWeek: 3, dependencies: ["Email Template Revision"], isApproval: false },
+  { name: "Final Template Revision", startWeek: 4, endWeek: 4, dependencies: ["Denis Approval"], isApproval: false },
+  { name: "Project Wrap-Up & Check-In", startWeek: 4, endWeek: 4, dependencies: [], isApproval: false }
 ];
 
 /**
- * Adapts base task rows for a journey.
- * Non-approval tasks are scaled by (totalWeeks/4) using Math.ceil.
- * (Caching has been removed so changes in difficulty always recalculate tasks.)
+ * Returns task rows for a journey, adjusted by difficulty.
  * @param {Object} journey - The journey.
  * @returns {Array} Task rows.
  */
@@ -139,9 +58,8 @@ function getTaskRowsForJourney(journey) {
 
 /**
  * Renders the Gantt chart for a journey.
- * Holiday cells now display a tooltip with both the date and holiday name.
  * @param {Object} journey - The journey.
- * @returns {string} HTML string.
+ * @returns {string} HTML string for the Gantt chart.
  */
 export function renderGantt(journey) {
   let totalWeeks = 4;
@@ -183,14 +101,17 @@ export function renderGantt(journey) {
     }
     html += `</td>`;
     
+    // Use scheduledStartDate for the Gantt chart's base date.
+    let baseDate = journey.scheduledStartDate ? new Date(journey.scheduledStartDate) : new Date(journey.startDate);
+    
     for (let w = 1; w <= totalWeeks; w++) {
       let cellClass = "";
       if (w >= row.startWeek && w <= row.endWeek) cellClass = "gantt-active";
       
-      let weekStart = addDays(new Date(journey.startDate), (w - 1) * 7);
+      let weekStart = addDays(baseDate, (w - 1) * 7);
       let weekEnd = addDays(weekStart, 6);
       
-      // Filter holidays for this week (HOLIDAYS now contains objects with date and name)
+      // Filter holidays for this week.
       let holidaysThisWeek = getHolidays().filter(h => {
         let hDate = new Date(h.date);
         return hDate >= weekStart && hDate <= weekEnd;
@@ -204,11 +125,11 @@ export function renderGantt(journey) {
         tooltip = holidaysThisWeek.map(h => `${h.date} - ${h.name}`).join(", ");
       }
       
-      // Mark the current week on active task cells only.
-      if (journey.startDate) {
+      // Mark the current week.
+      if (baseDate) {
         const oneWeekMs = 7 * 24 * 3600 * 1000;
         const today = new Date();
-        const weekIndex = Math.floor((today - new Date(journey.startDate)) / oneWeekMs) + 1;
+        const weekIndex = Math.floor((today - baseDate) / oneWeekMs) + 1;
         if (weekIndex === w && cellClass.includes("gantt-active")) {
           cellClass += " gantt-current";
         }

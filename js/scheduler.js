@@ -3,8 +3,7 @@
  *
  * Provides utility functions for scheduling journeys,
  * including date calculations, holiday detection, and sorting.
- * The static HOLIDAYS array has been removed; we now rely on setHolidays() / getHolidays()
- * to store and retrieve a dynamically generated holiday/break list.
+ * This updated version maintains both the initial (planned) dates and the updated scheduled dates.
  */
 
 let HOLIDAYS = [];
@@ -27,9 +26,9 @@ export function getHolidays() {
 }
 
 /**
- * Checks if a given date is in the holiday list.
+ * Checks if a given date is a holiday.
  * @param {Date} date - The date to check.
- * @returns {boolean} True if the date is a holiday or break day.
+ * @returns {boolean} True if the date is a holiday.
  */
 function isHoliday(date) {
   const ymd = toYMD(date);
@@ -58,7 +57,7 @@ export function toYMD(date) {
 }
 
 /**
- * Adds a number of days to a date (does not skip weekends/holidays).
+ * Adds a number of days to a date.
  * @param {Date} date - The base date.
  * @param {number} n - Number of days.
  * @returns {Date} New date.
@@ -79,7 +78,7 @@ export function isWeekend(date) {
 }
 
 /**
- * Returns the next business day, skipping weekends and any holiday/break days.
+ * Returns the next business day, skipping weekends and holidays.
  * @param {Date} date - Starting date.
  * @returns {Date} Next business day.
  */
@@ -93,9 +92,8 @@ export function getNextBusinessDay(date) {
 
 /**
  * Returns task duration (in days) based on difficulty.
- * Difficulties are capitalized ("Easy", "Medium", "Hard").
- * @param {string} difficulty - Difficulty.
- * @returns {number} Duration (days).
+ * @param {string} difficulty - "Easy", "Medium", or "Hard".
+ * @returns {number} Duration in days.
  */
 export function getDuration(difficulty) {
   if (difficulty === "Easy") return 30;
@@ -112,11 +110,7 @@ const priorityOrder = {
 };
 
 /**
- * Sorts journeys by:
- * 1) Completed journeys first,
- * 2) then explicit order if set,
- * 3) then by priority,
- * 4) for Critical journeys, uses priorityNumber if present.
+ * Sorts journeys by various criteria (completed, explicit order, then by priority).
  * @param {Array} journeyData - The array of journeys.
  */
 export function sortJourneys(journeyData) {
@@ -142,38 +136,61 @@ export function sortJourneys(journeyData) {
   });
 }
 
-/**
- * Base date for scheduling (example).
- * Adjust as needed or remove if not used.
- */
 export const BASE_START_DATE = new Date("2025-03-03");
 
 /**
  * Schedules journeys by assigning start and end dates.
- * Child journeys are scheduled relative to their parent's start date.
+ * Maintains initial (planned) dates and recalculates updated (scheduled) dates.
+ * For top-level journeys:
+ *  - If not already set, initialStartDate and initialEndDate are established.
+ *  - If a journey is completed, its scheduledEndDate equals the actual completion date.
+ *    Its scheduledStartDate is preserved if already set (to reflect the shifted date),
+ *    otherwise it is computed from currentDate.
+ *  - Otherwise, scheduled dates are recalculated from the currentDate.
+ * Child journeys are scheduled relative to their parent's scheduled start date.
  * @param {Array} journeyData - The array of journeys.
  */
 export function scheduleJourneys(journeyData) {
   sortJourneys(journeyData);
   let currentDate = getNextBusinessDay(BASE_START_DATE);
+  
   journeyData.forEach(j => {
+    // For child journeys, schedule relative to parent's scheduled start date.
     if (j.parentId) {
       const parent = journeyData.find(p => p.id === j.parentId);
-      if (parent) {
-        j.startDate = addDays(parent.startDate, 2);
-        j.endDate = addDays(j.startDate, getDuration(j.difficulty) - 1);
-        console.log(`Scheduled child journey "${j.title}" relative to "${parent.title}".`);
+      if (parent && parent.scheduledStartDate) {
+        j.scheduledStartDate = getNextBusinessDay(new Date(parent.scheduledStartDate));
       } else {
-        j.startDate = getNextBusinessDay(currentDate);
-        j.endDate = addDays(j.startDate, getDuration(j.difficulty) - 1);
-        currentDate = addDays(j.endDate, 1);
-        console.warn(`Parent for "${j.title}" not found; fallback scheduling.`);
+        j.scheduledStartDate = getNextBusinessDay(currentDate);
       }
+      j.scheduledEndDate = addDays(j.scheduledStartDate, getDuration(j.difficulty) - 1);
+      console.log(`Scheduled child journey "${j.title}" from ${toYMD(j.scheduledStartDate)} to ${toYMD(j.scheduledEndDate)}.`);
+      return;
+    }
+    
+    // For top-level journeys.
+    if (!j.initialStartDate) {
+      j.initialStartDate = getNextBusinessDay(currentDate);
+      console.log(`Initial start date for "${j.title}" set to ${toYMD(j.initialStartDate)}.`);
+    }
+    if (!j.initialEndDate) {
+      j.initialEndDate = addDays(j.initialStartDate, getDuration(j.difficulty) - 1);
+      console.log(`Initial end date for "${j.title}" set to ${toYMD(j.initialEndDate)}.`);
+    }
+    
+    if (j.completedDate) {
+      // For completed journeys, if a shifted scheduledStartDate exists, keep it.
+      if (!j.scheduledStartDate) {
+         j.scheduledStartDate = getNextBusinessDay(currentDate);
+      }
+      j.scheduledEndDate = new Date(j.completedDate);
+      console.log(`Journey "${j.title}" completed on ${toYMD(j.scheduledEndDate)} (planned end was ${toYMD(j.initialEndDate)}).`);
+      currentDate = getNextBusinessDay(j.scheduledEndDate);
     } else {
-      j.startDate = getNextBusinessDay(currentDate);
-      j.endDate = addDays(j.startDate, getDuration(j.difficulty) - 1);
-      currentDate = addDays(j.endDate, 1);
-      console.log(`Scheduled "${j.title}" from ${toYMD(j.startDate)} to ${toYMD(j.endDate)}.`);
+      j.scheduledStartDate = getNextBusinessDay(currentDate);
+      j.scheduledEndDate = addDays(j.scheduledStartDate, getDuration(j.difficulty) - 1);
+      console.log(`Scheduled "${j.title}" from ${toYMD(j.scheduledStartDate)} to ${toYMD(j.scheduledEndDate)}.`);
+      currentDate = getNextBusinessDay(j.scheduledEndDate);
     }
   });
 }

@@ -167,6 +167,9 @@ input[type="number"] {
   font-size: 24px;
   color: green;
 }
+.drop-dash {
+  border: 2px dashed #666;
+}
 
 /* Details Container */
 #details-container {

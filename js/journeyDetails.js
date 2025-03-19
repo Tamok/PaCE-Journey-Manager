@@ -2,14 +2,12 @@
  * journeyDetails.js
  *
  * Renders the detailed view for a journey.
- * Displays the journey title, dropdowns for difficulty and priority,
- * schedule information (start date, end date, duration), link editing (Podio/Zoho),
- * note editing, and a repositioned "Mark as Complete" button.
- * Also manages subjourneys – which are draggable with enhanced visual cues,
- * allow editing of difficulty/priority, display their links if set, and can be marked complete.
+ * Displays journey title, editable difficulty/priority, scheduling info,
+ * link editors, note editing, and a repositioned "Mark as Complete" button.
+ * Also handles subjourneys and renders the associated Gantt chart.
  *
- * Exports:
- *   renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback)
+ * Author: Your Name
+ * Date: YYYY-MM-DD
  */
 
 import { renderGantt, bindApprovalCheckboxes } from "./gantt.js";
@@ -17,7 +15,7 @@ import { toYMD, parseDate } from "./scheduler.js";
 
 /**
  * Renders the detailed view for the selected journey.
- * @param {Object} journey - The journey object to display.
+ * @param {Object} journey - The journey object.
  * @param {Array} journeyData - The complete array of journeys.
  * @param {Function} saveCallback - Callback to save journeyData.
  * @param {Function} refreshTimelineCallback - Callback to re-render the timeline.
@@ -27,7 +25,7 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
   detailsContainer.innerHTML = "";
   console.log(`Rendering details for journey: ${journey.title}`);
 
-  // Header: Title and "Mark as Complete" button or completion info.
+  // Header with title and completion button/info.
   const headerDiv = document.createElement("div");
   headerDiv.style.position = "relative";
   headerDiv.classList.add("journey-header");
@@ -63,16 +61,38 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
     headerDiv.appendChild(completeInfo);
   }
 
-  // Info section: Difficulty, Priority and Schedule details.
+  // Schedule and settings info.
   const infoDiv = document.createElement("div");
   infoDiv.style.marginBottom = "8px";
   let scheduleInfo = "(unscheduled)";
-  if (journey.startDate && journey.endDate) {
-    const startStr = new Date(journey.startDate).toLocaleDateString();
-    const endStr = new Date(journey.endDate).toLocaleDateString();
-    const duration = Math.ceil((new Date(journey.endDate) - new Date(journey.startDate) + 1) / (24 * 3600 * 1000));
-    scheduleInfo = `Start: ${startStr}, End: ${endStr}, Duration: ${duration} days`;
+  if (journey.initialStartDate && journey.initialEndDate && journey.scheduledStartDate && journey.scheduledEndDate) {
+    const plannedStart = new Date(journey.initialStartDate);
+    const plannedEnd = new Date(journey.initialEndDate);
+    const scheduledStart = new Date(journey.scheduledStartDate);
+    const scheduledEnd = new Date(journey.scheduledEndDate);
+    const plannedDuration = Math.ceil((plannedEnd - plannedStart + 1) / (24 * 3600 * 1000));
+    const startStr = scheduledStart.toLocaleDateString();
+    const endStr = scheduledEnd.toLocaleDateString();
+    scheduleInfo = `Start: ${startStr}, End: ${endStr}, Duration: ${plannedDuration} days`;
+    const today = new Date();
+    if (!journey.completedDate && today > plannedEnd) {
+      const overdueDays = Math.floor((today - plannedEnd) / (24 * 3600 * 1000));
+      scheduleInfo += ` <span style="color:red;">(${overdueDays} days over)</span>`;
+      console.log(`Journey "${journey.title}" is overdue by ${overdueDays} days.`);
+    }
+    if (journey.completedDate) {
+      const actualDuration = Math.ceil((scheduledEnd - scheduledStart + 1) / (24 * 3600 * 1000));
+      const diff = plannedDuration - actualDuration;
+      if (diff > 0) {
+        scheduleInfo += ` <span style="color:green;">(${diff} days early)</span>`;
+        console.log(`Journey "${journey.title}" completed ${diff} days early.`);
+      } else if (diff < 0) {
+        scheduleInfo += ` <span style="color:red;">(${Math.abs(diff)} days late)</span>`;
+        console.log(`Journey "${journey.title}" completed ${Math.abs(diff)} days late.`);
+      }
+    }
   }
+
   infoDiv.innerHTML = `
     <div style="margin-bottom:8px;">
       <label><strong>Difficulty:</strong></label>
@@ -113,7 +133,7 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
     renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
   });
 
-  // Podio/Zoho links editor (for top-level journeys).
+  // Podio/Zoho link editing (for top-level journeys).
   if (!journey.parentId) {
     const linkEditorBtn = document.createElement("button");
     linkEditorBtn.classList.add("btn");
@@ -270,7 +290,6 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
       else if (sub.priority === "Next") subClass = "sub-next";
       else if (sub.priority === "Sometime Maybe") subClass = "sub-sometime";
       subItem.classList.add("subjourney-item", subClass);
-      // Disable dragging if subjourney is completed.
       if (!sub.completedDate) subItem.setAttribute("draggable", "true");
       subItem.style.marginBottom = "10px";
       subItem.innerHTML = `
@@ -306,7 +325,6 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
           <button class="btn cancel-sub-edit btn-cancel" style="font-size:0.8rem;">Cancel</button>
         </div>
       `;
-      // Render links if present.
       const subLinksDiv = subItem.querySelector(".sub-links");
       if (sub.podioLink) subLinksDiv.innerHTML += `<a href="${sub.podioLink}" target="_blank">Podio</a> `;
       if (sub.zohoLink) subLinksDiv.innerHTML += `<a href="${sub.zohoLink}" target="_blank">Zoho</a>`;
@@ -341,7 +359,6 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
         }
         const [movedSubArr] = journey.subJourneys.splice(fromIdx, 1);
         journey.subJourneys.splice(toIdx, 0, movedSubArr);
-        // Update subjourney priority based on new position.
         if (toIdx > 0) {
           movedSubArr.priority = journey.subJourneys[toIdx - 1].priority;
         } else if (journey.subJourneys.length > 1) {
