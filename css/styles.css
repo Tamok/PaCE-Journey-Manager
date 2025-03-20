@@ -257,8 +257,57 @@ input[type="number"] {
   border: 1px dashed #aaa;
   background: #fdfdfd;
 }
-.subjourneys-container h3 {
+
+/* Subjourney Item Base */
+.subjourney-item {
+  padding: 10px;
+  border-radius: 5px;
   margin-bottom: 10px;
+  position: relative;
+}
+
+/* Accent for Critical Priority */
+.subjourney-item.sub-critical {
+  background-color: var(--critical-fill);
+  border-left: 4px solid var(--critical-color);
+}
+
+/* Accent for Important Priority */
+.subjourney-item.sub-important {
+  background-color: var(--important-fill);
+  border-left: 4px solid var(--important-color);
+}
+
+/* Accent for Next Priority */
+.subjourney-item.sub-next {
+  background-color: var(--next-fill);
+  border-left: 4px solid var(--next-color);
+}
+
+/* Accent for Sometime Maybe Priority */
+.subjourney-item.sub-sometime {
+  background-color: var(--maybe-fill);
+  border-left: 4px solid var(--maybe-color);
+}
+
+/* Drag Grip Icon for Subjourney Items */
+.subjourney-item .drag-grip {
+  display: inline-block;
+  cursor: move;
+  font-size: 1rem;
+  color: #666;
+  margin-right: 8px;
+}
+
+/* Drag-and-drop effect for subjourneys */
+.subjourney-item.drop-target {
+  border: 2px dashed #666;
+}
+
+/* Ensure Gantt chart grids render well in subjourney expandables */
+.sub-gantt .gantt-container {
+  background: #fff !important;
+  border-color: #ccc !important;
 }
 
 /* Legend */

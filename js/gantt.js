@@ -7,9 +7,7 @@
  *  - If an entire week is off, the cell gets the "gantt-holiday-full" class.
  *  - If only part of the week is affected, a tooltip is added with holiday details.
  * The current week (based on today's date) is highlighted on active task cells.
- *
- * Author: Your Name
- * Date: YYYY-MM-DD
+ * 
  */
 
 import { addDays, toYMD, getHolidays } from "./scheduler.js";

@@ -6,12 +6,27 @@
  * link editors, note editing, and a repositioned "Mark as Complete" button.
  * Also handles subjourneys and renders the associated Gantt chart.
  *
- * Author: Your Name
- * Date: YYYY-MM-DD
  */
 
 import { renderGantt, bindApprovalCheckboxes } from "./gantt.js";
 import { toYMD, parseDate } from "./scheduler.js";
+
+/**
+ * Helper: Sorts subjourneys of a journey by priority (using defined order),
+ * preserving manual order within each priority group.
+ * @param {Object} journey - The journey object containing subJourneys.
+ */
+function sortSubjourneys(journey) {
+  const priorityOrder = { "Critical": 1, "Important": 2, "Next": 3, "Sometime Maybe": 4 };
+  if (journey.subJourneys && journey.subJourneys.length > 0) {
+    journey.subJourneys = journey.subJourneys.sort((a, b) => {
+      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      }
+      return 0; // Preserve order within same priority (stable sort)
+    });
+  }
+}
 
 /**
  * Renders the detailed view for the selected journey.
@@ -275,6 +290,8 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
     if (!journey.subJourneys) journey.subJourneys = [];
     journey.subJourneys.push(newSub);
     console.log(`Added subjourney "${title}" to "${journey.title}".`);
+    // Sort after addition.
+    sortSubjourneys(journey);
     await saveCallback(journeyData);
     subForm.style.display = "none";
     renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
@@ -292,7 +309,10 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
       subItem.classList.add("subjourney-item", subClass);
       if (!sub.completedDate) subItem.setAttribute("draggable", "true");
       subItem.style.marginBottom = "10px";
+      
+      // Updated innerHTML: add drag-grip icon before the title.
       subItem.innerHTML = `
+        <span class="drag-grip" title="Drag to reorder">⋮⋮</span>
         <strong>${sub.title}</strong>
         <span style="font-size:0.85rem;">[${sub.difficulty} | ${sub.priority}]</span>
         <br><em>Note:</em> <span class="sub-note-display">${sub.note}</span>
@@ -325,10 +345,11 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
           <button class="btn cancel-sub-edit btn-cancel" style="font-size:0.8rem;">Cancel</button>
         </div>
       `;
+
       const subLinksDiv = subItem.querySelector(".sub-links");
       if (sub.podioLink) subLinksDiv.innerHTML += `<a href="${sub.podioLink}" target="_blank">Podio</a> `;
       if (sub.zohoLink) subLinksDiv.innerHTML += `<a href="${sub.zohoLink}" target="_blank">Zoho</a>`;
-      
+
       // Drag-and-drop for subjourneys.
       subItem.addEventListener("dragstart", (e) => {
         if (sub.completedDate) {
@@ -359,12 +380,31 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
         }
         const [movedSubArr] = journey.subJourneys.splice(fromIdx, 1);
         journey.subJourneys.splice(toIdx, 0, movedSubArr);
-        if (toIdx > 0) {
-          movedSubArr.priority = journey.subJourneys[toIdx - 1].priority;
-        } else if (journey.subJourneys.length > 1) {
-          movedSubArr.priority = journey.subJourneys[1].priority;
+        
+        // Determine new priority based on drop position:
+        let newPriority;
+        if (toIdx === 0) {
+          newPriority = "Critical";
+        } else if (toIdx === journey.subJourneys.length - 1) {
+          newPriority = "Sometime Maybe";
+        } else {
+          if (subItem.classList.contains("sub-critical")) {
+            newPriority = "Critical";
+          } else if (subItem.classList.contains("sub-important")) {
+            newPriority = "Important";
+          } else if (subItem.classList.contains("sub-next")) {
+            newPriority = "Next";
+          } else if (subItem.classList.contains("sub-sometime")) {
+            newPriority = "Sometime Maybe";
+          } else {
+            newPriority = movedSubArr.priority;
+          }
         }
+        movedSubArr.priority = newPriority;
         console.log(`Reordered subjourney "${movedSubArr.title}" from ${fromIdx} to ${toIdx} with new priority ${movedSubArr.priority}.`);
+        
+        // Self-sort subjourneys by priority (preserving manual order within each group).
+        sortSubjourneys(journey);
         await saveCallback(journeyData);
         renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
       });
@@ -389,6 +429,15 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
         console.log(`Toggled edit form for subjourney "${sub.title}".`);
       });
       
+      // Bind toggle for subjourney Gantt collapse/uncollapse.
+      const toggleGanttBtn = subItem.querySelector(".toggle-sub-gantt");
+      toggleGanttBtn.addEventListener("click", async () => {
+        sub._ganttVisible = !sub._ganttVisible;
+        console.log(`Toggled Gantt for subjourney "${sub.title}" to ${sub._ganttVisible}.`);
+        await saveCallback(journeyData);
+        renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
+      });
+      
       // Save subjourney edits.
       subItem.querySelector(".save-sub-edit").addEventListener("click", async () => {
         const newTitle = subItem.querySelector(".edit-sub-title").value.trim();
@@ -408,6 +457,8 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
         sub.podioLink = newPodio;
         sub.zohoLink = newZoho;
         console.log(`Updated subjourney "${newTitle}".`);
+        // Self-sort after editing priority.
+        sortSubjourneys(journey);
         await saveCallback(journeyData);
         renderJourneyDetails(journey, journeyData, saveCallback, refreshTimelineCallback);
       });

@@ -6,8 +6,6 @@
  * It displays an indicator showing if the journey is overdue (if not complete) or if it was completed early/late.
  * Drag-and-drop applies a dashed border effect (via the "drop-dash" class) to indicate valid drop targets.
  *
- * Author: Your Name
- * Date: YYYY-MM-DD
  */
 
 import { toYMD, scheduleJourneys } from "./scheduler.js";
