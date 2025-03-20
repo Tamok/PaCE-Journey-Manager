@@ -240,6 +240,10 @@ input[type="number"] {
 .gantt-current {
   outline: 2px solid red;
 }
+.approval-timestamp.completed {
+  color: green;
+  font-style: italic;
+}
 
 /* Dependency highlight */
 .dependency-highlight {
