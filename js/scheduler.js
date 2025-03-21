@@ -91,6 +91,29 @@ export function getNextBusinessDay(date) {
 }
 
 /**
+ * Computes the ISO week number for a given date.
+ * @param {Date} date - The date object.
+ * @returns {number} The ISO week number.
+ */
+export function getCalendarWeek(date) {
+  const target = new Date(date.valueOf());
+  // ISO week date weeks start on Monday, so adjust the day number
+  const dayNr = (date.getDay() + 6) % 7;
+  // Set the target to the Thursday in the current week
+  target.setDate(target.getDate() - dayNr + 3);
+  const firstThursday = target.valueOf();
+  // January 1st of this year
+  target.setMonth(0, 1);
+  // Find the first Thursday of the year
+  if (target.getDay() !== 4) {
+    target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+  }
+  // Calculate the ISO week number
+  const weekNumber = 1 + Math.ceil((firstThursday - target) / 604800000);
+  return weekNumber;
+}
+
+/**
  * Returns task duration (in days) based on difficulty.
  * @param {string} difficulty - "Easy", "Medium", or "Hard".
  * @returns {number} Duration in days.
@@ -148,6 +171,10 @@ export const BASE_START_DATE = new Date("2025-03-03");
  *    otherwise it is computed from currentDate.
  *  - Otherwise, scheduled dates are recalculated from the currentDate.
  * Child journeys are scheduled relative to their parent's scheduled start date.
+ *
+ * Each new top‑level journey starts strictly on the next business day following the previous journey’s end date.
+ * Logs are added to warn if duplicate start days are detected.
+ *
  * @param {Array} journeyData - The array of journeys.
  */
 export function scheduleJourneys(journeyData) {
@@ -185,12 +212,27 @@ export function scheduleJourneys(journeyData) {
       }
       j.scheduledEndDate = new Date(j.completedDate);
       console.log(`Journey "${j.title}" completed on ${toYMD(j.scheduledEndDate)} (planned end was ${toYMD(j.initialEndDate)}).`);
-      currentDate = getNextBusinessDay(j.scheduledEndDate);
+      // Advance to the next business day after the completion date.
+      currentDate = getNextBusinessDay(addDays(j.scheduledEndDate, 1));
     } else {
       j.scheduledStartDate = getNextBusinessDay(currentDate);
       j.scheduledEndDate = addDays(j.scheduledStartDate, getDuration(j.difficulty) - 1);
       console.log(`Scheduled "${j.title}" from ${toYMD(j.scheduledStartDate)} to ${toYMD(j.scheduledEndDate)}.`);
-      currentDate = getNextBusinessDay(j.scheduledEndDate);
+      // Advance currentDate to the next business day following the scheduled end date.
+      currentDate = getNextBusinessDay(addDays(j.scheduledEndDate, 1));
+    }
+  });
+
+  // Logging check: Verify no two top-level journeys share the same scheduled start date.
+  const startDates = {};
+  journeyData.forEach(j => {
+    if (!j.parentId && j.scheduledStartDate) {
+      const dateStr = toYMD(j.scheduledStartDate);
+      if (startDates[dateStr]) {
+        console.warn(`Duplicate start date detected: Journeys "${startDates[dateStr]}" and "${j.title}" are both scheduled on ${dateStr}.`);
+      } else {
+        startDates[dateStr] = j.title;
+      }
     }
   });
 }

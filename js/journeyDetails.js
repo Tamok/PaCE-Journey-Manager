@@ -324,7 +324,7 @@ export function renderJourneyDetails(journey, journeyData, saveCallback, refresh
           <button class="btn toggle-sub-gantt" title="Toggle Gantt" style="font-size:0.8rem;">${sub._ganttVisible ? "▲" : "▼"}</button>
         </div>
         <div class="sub-links" style="font-size:0.8rem;"></div>
-        <div class="sub-gantt" style="display: ${sub._ganttVisible ? "block" : "none"};">${renderGantt(sub)}</div>
+        <div class="sub-gantt" style="display: ${sub._ganttVisible ? "block" : "none"};">${renderGantt(sub, journey.scheduledStartDate)}</div>
         <div class="edit-sub-form" style="display:none; margin-top:4px;">
           <input type="text" class="edit-sub-title" value="${sub.title}" />
           <select class="edit-sub-difficulty">

@@ -10,7 +10,7 @@
  * 
  */
 
-import { addDays, toYMD, getHolidays } from "./scheduler.js";
+import { addDays, toYMD, getHolidays, getCalendarWeek } from "./scheduler.js";
 
 /**
  * Base Task Rows Definition
@@ -57,9 +57,15 @@ function getTaskRowsForJourney(journey) {
 /**
  * Renders the Gantt chart for a journey.
  * @param {Object} journey - The journey.
+ * @param {Date|string|null} [baseOverride=null] - Optional base date override to use as the start date.
  * @returns {string} HTML string for the Gantt chart.
  */
-export function renderGantt(journey) {
+export function renderGantt(journey, baseOverride = null) {
+  // Use the override base date if provided; otherwise, use the journey's own scheduled start date (or fallback to startDate)
+  let baseDate = baseOverride 
+      ? new Date(baseOverride) 
+      : (journey.scheduledStartDate ? new Date(journey.scheduledStartDate) : new Date(journey.startDate));
+
   let totalWeeks = 4;
   const diff = journey.difficulty
     ? journey.difficulty.charAt(0).toUpperCase() + journey.difficulty.slice(1).toLowerCase()
@@ -72,8 +78,12 @@ export function renderGantt(journey) {
       <thead>
         <tr>
           <th class="task-row-name">Task</th>`;
+  // Render header cells using calendar week number and year suffix
   for (let w = 1; w <= totalWeeks; w++) {
-    html += `<th>Week ${w}</th>`;
+    const weekStart = addDays(baseDate, (w - 1) * 7);
+    const weekNum = getCalendarWeek(weekStart);
+    const yearSuffix = String(weekStart.getFullYear()).slice(-2);
+    html += `<th>Week ${weekNum}<sup>${yearSuffix}</sup></th>`;
   }
   html += `</tr></thead><tbody>`;
   
@@ -98,9 +108,6 @@ export function renderGantt(journey) {
       html += `<br><small>depends on: ${row.dependencies.join(", ")}</small>`;
     }
     html += `</td>`;
-    
-    // Use scheduledStartDate for the Gantt chart's base date.
-    let baseDate = journey.scheduledStartDate ? new Date(journey.scheduledStartDate) : new Date(journey.startDate);
     
     for (let w = 1; w <= totalWeeks; w++) {
       let cellClass = "";
