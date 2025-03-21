@@ -1,177 +1,196 @@
 /**
  * holidayGenerator.js
  *
- * Generates standard U.S. holidays and UCSB academic breaks programmatically
- * by analyzing quarter start/end data. Returns a list of objects
- * [{ date: "YYYY-MM-DD", name: "Holiday or Break" }, ...].
+ * This module dynamically generates standard U.S. holidays
+ * and UCSB academic break closures for any year range based on
+ * configurable formulas rather than hard-coded dates.
  *
- * This is intended to replace any static HOLIDAYS array with dynamic generation.
- * Store the results in memory so the rest of the app can reference them.
+ * Academic quarters are computed as follows (for a given academic year):
+ *   • Fall Quarter begins on the last Monday of September.
+ *   • Quarter end is defined as 77 days later (i.e. 10 full weeks of instruction,
+ *     1 week of finals, and the following Saturday marking the official end).
+ *   • Winter Quarter begins on January 2 of the following year (or the next business day)
+ *   • Spring Quarter begins on the Monday immediately following a 1‑week break after
+ *     Winter Quarter ends.
+ *
+ * From these computed boundaries, academic breaks are defined as:
+ *   • Winter Break: from the day after Fall Quarter ends up to the day before Winter Quarter begins.
+ *   • Spring Break: from the day after Winter Quarter ends up to the day before Spring Quarter begins.
+ *
+ * For any given year range the module returns an array of holiday objects,
+ * one object per day for multi‑day breaks and single objects for one‑day holidays.
+ *
+ * Dependencies: scheduler.js exports utility functions: toYMD, addDays, getNextBusinessDay, and parseDate.
  */
 
-import { parseDate, toYMD, addDays } from "./scheduler.js";
+import { toYMD, addDays, getNextBusinessDay, parseDate } from "./scheduler.js";
 
 /**
- * Returns the Date corresponding to the nth occurrence of a particular weekday
- * in a given month and year. For example, the 3rd Monday in January 2025.
- * @param {number} year - The year (e.g. 2025).
- * @param {number} month - The month (1‑12).
- * @param {number} weekday - The desired weekday (0=Sun, 1=Mon, ... 6=Sat).
- * @param {number} n - The nth occurrence (1=first, 2=second, etc.).
- * @returns {Date} The matching date.
+ * Returns the date of the last occurrence of a given weekday in a specified month.
+ * @param {number} year - Full year (e.g. 2024)
+ * @param {number} month - Month number (1-12)
+ * @param {number} weekday - Target weekday (0=Sun, 1=Mon, …, 6=Sat)
+ * @returns {Date} Date of the last occurrence of weekday in that month.
+ */
+function getLastWeekdayOfMonth(year, month, weekday) {
+  // Get last day of the month (month is 1-indexed; day 0 of next month gives last day)
+  const lastDay = new Date(year, month, 0);
+  const offset = (lastDay.getDay() - weekday + 7) % 7;
+  lastDay.setDate(lastDay.getDate() - offset);
+  return lastDay;
+}
+
+/**
+ * Returns the date corresponding to the nth occurrence of a weekday in a month.
+ * For example, the 3rd Monday in January.
+ * @param {number} year - Full year (e.g. 2025)
+ * @param {number} month - Month number (1-12)
+ * @param {number} weekday - Desired weekday (0=Sun, 1=Mon, …, 6=Sat)
+ * @param {number} n - The occurrence count (e.g. 3 for third occurrence)
+ * @returns {Date} Matching date.
  */
 function getNthWeekdayOfMonth(year, month, weekday, n) {
   const firstDay = new Date(year, month - 1, 1);
   const firstDayWeekday = firstDay.getDay();
-  // Offset: how many days from the 1st to get the first desired weekday
   let offset = weekday - firstDayWeekday;
   if (offset < 0) offset += 7;
-  // Now add (n-1) weeks (each 7 days)
   const day = 1 + offset + 7 * (n - 1);
   return new Date(year, month - 1, day);
 }
 
 /**
- * Returns the Date of the last Monday in May, for Memorial Day.
- * @param {number} year - The year.
- * @returns {Date} The last Monday of May for that year.
+ * Computes the Fall Quarter start date for an academic year.
+ * According to the rules, Fall Quarter begins on the last Monday of September.
+ * @param {number} fallYear - The starting year of the academic year (e.g., 2024 for 2024–2025)
+ * @returns {Date} Fall Quarter start date.
  */
-function getLastMondayOfMay(year) {
-  // Start at June 1st, go back until we find Monday in the last week of May.
-  const juneFirst = new Date(year, 5, 1); // June is month 5 (0-based in JS)
-  let day = new Date(juneFirst.getTime());
-  day.setDate(day.getDate() - 1); // Move to May 31
-  while (day.getDay() !== 1) {
-    day.setDate(day.getDate() - 1);
-  }
-  return day;
+function getFallQuarterStart(fallYear) {
+  return getLastWeekdayOfMonth(fallYear, 9, 1); // 1 = Monday
 }
 
 /**
- * Generates standard U.S. holidays for a given year. 
- * Returns an array of objects with { date: "YYYY-MM-DD", name: "Holiday" }.
- * @param {number} year - The year.
+ * Computes the quarter end date given the quarter start.
+ * Here we assume a fixed quarter length of 78 days (10 weeks of instruction,
+ * 1 week of finals, and the Saturday following finals).
+ * @param {Date} startDate - Quarter start date.
+ * @returns {Date} Quarter end date.
+ */
+function getQuarterEnd(startDate) {
+  return addDays(startDate, 77);
+}
+
+/**
+ * Computes the Winter Quarter start for the academic year.
+ * Winter Quarter is set to begin on January 2 of the following year (or the next business day).
+ * @param {number} fallYear - The starting year of the academic year.
+ * @returns {Date} Winter Quarter start date.
+ */
+function getWinterQuarterStart(fallYear) {
+  const jan2 = new Date(fallYear + 1, 0, 2);
+  return getNextBusinessDay(jan2);
+}
+
+/**
+ * Computes the Spring Quarter start for the academic year.
+ * Spring Quarter is assumed to start on the Monday immediately following a 1‑week break after Winter Quarter ends.
+ * For simplicity, we set Spring Quarter start = Winter Quarter end + 8 days,
+ * then adjust forward until it falls on a Monday.
+ * @param {number} fallYear - The starting year of the academic year.
+ * @returns {Date} Spring Quarter start date.
+ */
+function getSpringQuarterStart(fallYear) {
+  const winterStart = getWinterQuarterStart(fallYear);
+  const winterEnd = getQuarterEnd(winterStart);
+  let proposed = addDays(winterEnd, 8); // 1 day gap + 7-day break = 8 days later
+  // Adjust forward to the next Monday if necessary.
+  while (proposed.getDay() !== 1) {
+    proposed = addDays(proposed, 1);
+  }
+  return proposed;
+}
+
+/**
+ * Generates standard U.S. holidays for a given calendar year.
+ * Returns an array of holiday objects { date: "YYYY-MM-DD", name: "Holiday" }.
+ * @param {number} year - The calendar year.
+ * @returns {Array} Array of U.S. holiday objects.
  */
 function generateStandardUSHolidays(year) {
   const holidays = [];
-
   // New Year's Day (fixed)
   holidays.push({
     date: `${year}-01-01`,
     name: "New Year's Day"
   });
-
   // Martin Luther King Jr. Day (3rd Monday in January)
   const mlk = getNthWeekdayOfMonth(year, 1, 1, 3);
   holidays.push({
     date: toYMD(mlk),
     name: "Martin Luther King Jr. Day"
   });
-
   // Presidents Day (3rd Monday in February)
   const pres = getNthWeekdayOfMonth(year, 2, 1, 3);
   holidays.push({
     date: toYMD(pres),
     name: "Presidents Day"
   });
-
-  // Cesar Chavez Day (March 31, observed in CA)
+  // Cesar Chavez Day (March 31)
   holidays.push({
     date: `${year}-03-31`,
     name: "Cesar Chavez Day"
   });
-
   // Memorial Day (last Monday in May)
-  const memorial = getLastMondayOfMay(year);
+  const memorial = getLastWeekdayOfMonth(year, 5, 1);
   holidays.push({
     date: toYMD(memorial),
     name: "Memorial Day"
   });
-
   // Juneteenth (June 19)
   holidays.push({
     date: `${year}-06-19`,
     name: "Juneteenth"
   });
-
   // Independence Day (July 4)
   holidays.push({
     date: `${year}-07-04`,
     name: "Independence Day"
   });
-
   // Labor Day (1st Monday in September)
   const labor = getNthWeekdayOfMonth(year, 9, 1, 1);
   holidays.push({
     date: toYMD(labor),
     name: "Labor Day"
   });
-
   // Veterans Day (November 11)
   holidays.push({
     date: `${year}-11-11`,
     name: "Veterans Day"
   });
-
   // Thanksgiving (4th Thursday in November)
   const thanks = getNthWeekdayOfMonth(year, 11, 4, 4);
   holidays.push({
     date: toYMD(thanks),
     name: "Thanksgiving"
   });
-
   // Christmas Day (December 25)
   holidays.push({
     date: `${year}-12-25`,
     name: "Christmas Day"
   });
-
   return holidays;
 }
 
 /**
- * Represents known quarter start/end dates by academic year.
- * This can be expanded or updated as needed to cover more years.
- * Each property is an object: { start: "YYYY-MM-DD", end: "YYYY-MM-DD" }.
- */
-const academicCalendar = {
-  "2024-2025": {
-    fall:   { start: "2024-09-22", end: "2024-12-14" },
-    winter: { start: "2025-01-06", end: "2025-03-22" },
-    spring: { start: "2025-03-31", end: "2025-06-14" },
-    summer: { start: "2025-06-23", end: "2025-09-20" }
-  },
-  "2025-2026": {
-    fall:   { start: "2025-09-28", end: "2025-12-13" },
-    winter: { start: "2026-01-05", end: "2026-03-21" },
-    spring: { start: "2026-03-30", end: "2026-06-13" },
-    summer: { start: "2026-06-22", end: "2026-09-19" }
-  },
-  "2026-2027": {
-    fall:   { start: "2026-09-27", end: "2026-12-12" },
-    winter: { start: "2027-01-04", end: "2027-03-20" },
-    spring: { start: "2027-03-29", end: "2027-06-12" },
-    summer: { start: "2027-06-21", end: "2027-09-18" }
-  },
-  "2027-2028": {
-    fall:   { start: "2027-09-26", end: "2027-12-11" },
-    winter: { start: "2028-01-03", end: "2028-03-18" },
-    spring: { start: "2028-03-27", end: "2028-06-10" },
-    summer: { start: "2028-06-19", end: "2028-09-16" }
-  }
-};
-
-/**
- * Generates day‑by‑day break entries between two dates (inclusive).
- * Each date in this range is returned as a separate holiday object.
- * @param {string} breakName - Name of the break (e.g. "Winter Break").
- * @param {Date} start - Start date object.
- * @param {Date} end - End date object.
- * @returns {Array} Array of { date: "YYYY-MM-DD", name: breakName }.
+ * Generates day‑by‑day holiday objects for a break period.
+ * Each day from start to end (inclusive) is returned as a separate holiday object.
+ * @param {string} breakName - Name to label the break (e.g. "Winter Break").
+ * @param {Date} start - Break start date.
+ * @param {Date} end - Break end date.
+ * @returns {Array} Array of holiday objects.
  */
 function generateBreakDays(breakName, start, end) {
   const days = [];
-  let current = new Date(start.getTime());
+  let current = new Date(start);
   while (current <= end) {
     days.push({
       date: toYMD(current),
@@ -183,102 +202,73 @@ function generateBreakDays(breakName, start, end) {
 }
 
 /**
- * Computes a single holiday event for a break period.
- * It calculates the midpoint between the break start and end dates,
- * then returns an object with that representative date and the break name.
+ * Dynamically generates academic break entries (day-by-day) for the given academic year.
+ * The academic year is specified by its fall (starting) year.
+ * Two breaks are generated:
+ *   • Winter Break: from the day after Fall Quarter ends up to the day before Winter Quarter begins.
+ *   • Spring Break: from the day after Winter Quarter ends up to the day before Spring Quarter begins.
  *
- * @param {string} breakName - Name of the break (e.g., "Spring Break").
- * @param {Date} start - Start date of the break.
- * @param {Date} end - End date of the break.
- * @returns {Object} Holiday object: { date: "YYYY-MM-DD", name: breakName }.
+ * @param {number} fallYear - The starting year of the academic year (e.g., 2024 for 2024–2025).
+ * @returns {Array} Array of holiday objects for the academic breaks.
  */
-function generateBreakHoliday(breakName, start, end) {
-    const diffMs = end.getTime() - start.getTime();
-    const midPoint = new Date(start.getTime() + diffMs / 2);
-    return {
-      date: toYMD(midPoint),
-      name: breakName
-    };
+function generateAcademicBreaksDynamic(fallYear) {
+  const breaks = [];
+
+  // Compute dynamic quarter boundaries.
+  const fallStart = getFallQuarterStart(fallYear);
+  const fallEnd = getQuarterEnd(fallStart);
+  const winterStart = getWinterQuarterStart(fallYear);
+  const springStart = getSpringQuarterStart(fallYear);
+
+  // Winter Break: from day after Fall Quarter end to day before Winter Quarter start.
+  const winterBreakStart = addDays(fallEnd, 1);
+  const winterBreakEnd = addDays(winterStart, -1);
+  if (winterBreakStart <= winterBreakEnd) {
+    breaks.push(...generateBreakDays("Winter Break", winterBreakStart, winterBreakEnd));
   }
-  
-  /**
-   * Given the quarter data for a single academic year, generates single holiday events
-   * for academic breaks:
-   * - Winter Break: from day after fall end until day before winter start.
-   * - Spring Break: from day after winter end until day before spring start.
-   *
-   * @param {Object} yearData - For example: 
-   *   { fall: {start, end}, winter: {start, end}, spring: {start, end}, summer: {start, end} }
-   * @returns {Array} An array containing one holiday object per break period.
-   */
-  function generateAcademicBreaks(yearData) {
-    const results = [];
-  
-    // Convert date strings to Date objects
-    const fallEnd = parseDate(yearData.fall.end);
-    const winterStart = parseDate(yearData.winter.start);
-    const winterEnd = parseDate(yearData.winter.end);
-    const springStart = parseDate(yearData.spring.start);
-  
-    // Winter Break: from the day after fall end to the day before winter start
-    const winterBreakStart = addDays(fallEnd, 1);
-    const winterBreakEnd = addDays(winterStart, -1);
-    if (winterBreakStart <= winterBreakEnd) {
-      results.push(generateBreakHoliday("Winter Break", winterBreakStart, winterBreakEnd));
-    }
-  
-    // Spring Break: from the day after winter end to the day before spring start
-    const springBreakStart = addDays(winterEnd, 1);
-    const springBreakEnd = addDays(springStart, -1);
-    if (springBreakStart <= springBreakEnd) {
-      results.push(generateBreakHoliday("Spring Break", springBreakStart, springBreakEnd));
-    }
-  
-    // (Optional) Additional breaks can be added similarly if needed.
-  
-    return results;
-  }  
+
+  // Compute Winter Quarter end.
+  const winterEnd = getQuarterEnd(winterStart);
+  // Spring Break: from day after Winter Quarter end to day before Spring Quarter start.
+  const springBreakStart = addDays(winterEnd, 1);
+  const springBreakEnd = addDays(springStart, -1);
+  if (springBreakStart <= springBreakEnd) {
+    breaks.push(...generateBreakDays("Spring Break", springBreakStart, springBreakEnd));
+  }
+
+  return breaks;
+}
 
 /**
- * Generates a complete array of holidays and breaks for each academic year
- * in the specified range. This includes:
- * - All standard U.S. holidays for each calendar year in [yearStart..yearEnd].
- * - Quarter breaks from academicCalendar (where keys cross those years).
- * 
- * @param {number} yearStart - Starting year for holiday generation (e.g. 2024).
- * @param {number} yearEnd - Ending year for holiday generation (e.g. 2028).
- * @returns {Array} All holiday/break objects, each { date, name }.
+ * Generates a complete array of holidays and academic breaks for a given year range.
+ * This includes:
+ *   • Standard U.S. holidays for every calendar year in the range.
+ *   • Academic break days computed dynamically for each academic year.
+ *
+ * For academic breaks, each academic year is considered based on its fall (starting) year.
+ *
+ * @param {number} yearStart - The first calendar year (e.g., 2024).
+ * @param {number} yearEnd - The last calendar year (e.g., 2028).
+ * @returns {Array} Sorted array of holiday objects { date, name }.
  */
 export function generateUCSBHolidaysAndBreaks(yearStart, yearEnd) {
   const allHolidays = [];
 
-  // Generate standard U.S. holidays for each year
+  // Add standard U.S. holidays for each calendar year.
   for (let y = yearStart; y <= yearEnd; y++) {
-    const yearHolidays = generateStandardUSHolidays(y);
-    allHolidays.push(...yearHolidays);
+    allHolidays.push(...generateStandardUSHolidays(y));
   }
 
-  // Generate academic breaks for each known academic year that overlaps [yearStart..yearEnd]
-  for (const acadYearKey of Object.keys(academicCalendar)) {
-    const [startY, endY] = acadYearKey.split("-").map(Number);
-    // The "endY" is the year portion of "2024-2025", typically endY = startY+1
-    // Check if the academic year is within or intersects [yearStart..yearEnd]
-    if (startY >= yearStart - 1 && endY <= yearEnd + 1) {
-      const yearData = academicCalendar[acadYearKey];
-      const breaks = generateAcademicBreaks(yearData);
-      allHolidays.push(...breaks);
-    }
+  // Generate academic break days for each academic year starting in each fall year.
+  // (For example, academic year 2024–2025 is generated using fallYear = 2024.)
+  for (let fallYear = yearStart; fallYear <= yearEnd; fallYear++) {
+    const academicBreaks = generateAcademicBreaksDynamic(fallYear);
+    allHolidays.push(...academicBreaks);
   }
 
-  // Sort by date ascending
-  allHolidays.sort((a, b) => {
-    const da = parseDate(a.date).getTime();
-    const db = parseDate(b.date).getTime();
-    return da - db;
-  });
+  // Sort all holiday objects by date (ascending).
+  allHolidays.sort((a, b) => parseDate(a.date) - parseDate(b.date));
 
-  console.log(
-    `Generated ${allHolidays.length} holiday/break entries for ${yearStart}‑${yearEnd}.`
-  );
+  console.log(`Generated ${allHolidays.length} holiday/break entries for ${yearStart}-${yearEnd}.`);
   return allHolidays;
 }
