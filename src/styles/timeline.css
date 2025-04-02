@@ -1,0 +1,55 @@
+.timeline-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    overflow-x: auto;
+    padding: 20px;
+  }
+  
+  .timeline-item {
+    flex: 0 0 auto;
+    border-radius: 50%;
+    width: 130px;
+    height: 130px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    border: 3px solid;
+    background: #fff;
+    transition: transform 0.3s ease, background 0.3s ease;
+  }
+  
+  .timeline-item:hover {
+    transform: scale(1.1);
+    background: #f0f0f0;
+  }
+  
+  .timeline-item.completed {
+    border-color: #999;
+    background: #ccc;
+    color: #444;
+  }
+  
+  .timeline-item.critical {
+    border-color: #003660;
+  }
+  
+  .timeline-item.important {
+    border-color: #febc11;
+  }
+  
+  .timeline-item.next {
+    border-color: #1178b5;
+  }
+  
+  .timeline-item.sometime-maybe {
+    border-color: #999;
+  }
+  
+  .date-label {
+    font-size: 0.85rem;
+  }
+  

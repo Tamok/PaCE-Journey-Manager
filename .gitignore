@@ -6,6 +6,7 @@ js/firebase-config.js
 
 # Firebase hosting cache file
 .firebase/
+.firebaserc
 
 # Build artifacts
 dist/
@@ -18,3 +19,4 @@ Thumbs.db
 
 # Environment files
 .env
+todo.txt
