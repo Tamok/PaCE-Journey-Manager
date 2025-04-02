@@ -165,14 +165,11 @@ export const BASE_START_DATE = new Date("2025-03-03");
  * Schedules journeys by assigning start and end dates.
  * Maintains initial (planned) dates and recalculates updated (scheduled) dates.
  * For top-level journeys:
- *  - If not already set, initialStartDate and initialEndDate are established.
- *  - If a journey is completed, its scheduledEndDate equals the actual completion date.
- *    Its scheduledStartDate is preserved if already set (to reflect the shifted date),
- *    otherwise it is computed from currentDate.
- *  - Otherwise, scheduled dates are recalculated from the currentDate.
+ *  - If a journey is completed, its scheduledEndDate is set to its completed date,
+ *    and the next journey's start date is the next business day after that completion.
+ *  - For incomplete journeys, the initial and scheduled dates are recalculated based on the current timeline.
  * Child journeys are scheduled relative to their parent's scheduled start date.
  *
- * Each new top‑level journey starts strictly on the next business day following the previous journey’s end date.
  * Logs are added to warn if duplicate start days are detected.
  *
  * @param {Array} journeyData - The array of journeys.
@@ -182,7 +179,7 @@ export function scheduleJourneys(journeyData) {
   let currentDate = getNextBusinessDay(BASE_START_DATE);
   
   journeyData.forEach(j => {
-    // For child journeys, schedule relative to parent's scheduled start date.
+    // For child journeys, schedule relative to the parent's scheduled start date.
     if (j.parentId) {
       const parent = journeyData.find(p => p.id === j.parentId);
       if (parent && parent.scheduledStartDate) {
@@ -195,35 +192,29 @@ export function scheduleJourneys(journeyData) {
       return;
     }
     
-    // For top-level journeys.
-    if (!j.initialStartDate) {
-      j.initialStartDate = getNextBusinessDay(currentDate);
-      console.log(`Initial start date for "${j.title}" set to ${toYMD(j.initialStartDate)}.`);
-    }
-    if (!j.initialEndDate) {
-      j.initialEndDate = addDays(j.initialStartDate, getDuration(j.difficulty) - 1);
-      console.log(`Initial end date for "${j.title}" set to ${toYMD(j.initialEndDate)}.`);
-    }
-    
+    // For top-level journeys:
     if (j.completedDate) {
-      // For completed journeys, if a shifted scheduledStartDate exists, keep it.
+      // If the journey is completed, use its completed date as the scheduled end date.
       if (!j.scheduledStartDate) {
          j.scheduledStartDate = getNextBusinessDay(currentDate);
       }
       j.scheduledEndDate = new Date(j.completedDate);
-      console.log(`Journey "${j.title}" completed on ${toYMD(j.scheduledEndDate)} (planned end was ${toYMD(j.initialEndDate)}).`);
-      // Advance to the next business day after the completion date.
+      console.log(`Journey "${j.title}" completed on ${toYMD(j.scheduledEndDate)}.`);
+      // Advance currentDate to the next business day after the completed date.
       currentDate = getNextBusinessDay(addDays(j.scheduledEndDate, 1));
     } else {
-      j.scheduledStartDate = getNextBusinessDay(currentDate);
-      j.scheduledEndDate = addDays(j.scheduledStartDate, getDuration(j.difficulty) - 1);
+      // For incomplete journeys, recalculate the initial and scheduled dates based on the current timeline.
+      j.initialStartDate = getNextBusinessDay(currentDate);
+      j.initialEndDate = addDays(j.initialStartDate, getDuration(j.difficulty) - 1);
+      j.scheduledStartDate = j.initialStartDate;
+      j.scheduledEndDate = j.initialEndDate;
       console.log(`Scheduled "${j.title}" from ${toYMD(j.scheduledStartDate)} to ${toYMD(j.scheduledEndDate)}.`);
       // Advance currentDate to the next business day following the scheduled end date.
       currentDate = getNextBusinessDay(addDays(j.scheduledEndDate, 1));
     }
   });
 
-  // Logging check: Verify no two top-level journeys share the same scheduled start date.
+  // Logging check: Verify that no two top-level journeys share the same scheduled start date.
   const startDates = {};
   journeyData.forEach(j => {
     if (!j.parentId && j.scheduledStartDate) {
