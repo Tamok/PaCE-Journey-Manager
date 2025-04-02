@@ -4,14 +4,12 @@ import { toYMD } from '../services/scheduler';
 import '../styles/timeline.css';
 
 const Timeline = ({ journeyData, onSelectJourney, role, onReorder }) => {
-  // Filter top-level journeys (no parentId)
   const topJourneys = journeyData.filter(journey => !journey.parentId);
 
   const handleClick = (index) => {
     onSelectJourney(index);
   };
 
-  // Admin-only drag handlers
   const handleDragStart = (e, index) => {
     if (role !== 'admin') return;
     e.dataTransfer.setData('text/plain', index);
@@ -29,13 +27,8 @@ const Timeline = ({ journeyData, onSelectJourney, role, onReorder }) => {
     <div className="timeline-container">
       {topJourneys.map((journey, index) => {
         const startDate = journey.scheduledStartDate ? new Date(journey.scheduledStartDate) : null;
-        const startStr = startDate
-          ? startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-          : '';
-        const fullDate = startDate
-          ? startDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-          : '';
-
+        const startStr = startDate ? startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
+        const fullDate = startDate ? startDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : '';
         return (
           <div
             key={journey.id}
