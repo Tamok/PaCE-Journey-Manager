@@ -12,8 +12,10 @@ const AdminConsole = ({ setImpersonationMode }) => {
   const [activeTab, setActiveTab] = useState('Logs');
   const [localLogs, setLocalLogs] = useState(getStoredLogs());
   const [remoteLogs, setRemoteLogs] = useState([]);
-  const [showLocal, setShowLocal] = useState(true);
+  // Default to only remote logs
+  const [showLocal, setShowLocal] = useState(false);
   const [showRemote, setShowRemote] = useState(true);
+
   const [filterText, setFilterText] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [impersonating, setImpersonating] = useState(false);
@@ -53,23 +55,39 @@ const AdminConsole = ({ setImpersonationMode }) => {
       {impersonating && <ImpersonationBanner />}
       {isOpen ? (
         <div className="fixed top-0 right-0 w-96 h-full bg-gray-900 text-white p-4 overflow-auto z-50 shadow-xl">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mb-2">
             <span className="font-bold text-lg">Admin Console</span>
             <div>
-              <Button variant="outline" size="sm" onClick={() => { clearStoredLogs(); setLocalLogs([]); }}>Clear Logs</Button>
-              <Button variant="destructive" size="sm" className="ml-2" onClick={() => setIsOpen(false)}>Close</Button>
+              <Button variant="outline" size="sm"
+                onClick={() => { clearStoredLogs(); setLocalLogs([]); }}>
+                Clear Logs
+              </Button>
+              <Button variant="destructive" size="sm" className="ml-2" onClick={() => setIsOpen(false)}>
+                Close
+              </Button>
             </div>
           </div>
 
-          <div className="flex gap-2 mt-4 mb-2">
-            <Button variant={activeTab === 'Logs' ? 'default' : 'outline'} size="sm" onClick={() => setActiveTab('Logs')}>Logs</Button>
-            <Button variant={activeTab === 'Snapshots' ? 'default' : 'outline'} size="sm" onClick={() => setActiveTab('Snapshots')}>Snapshots</Button>
-            <Button variant={activeTab === 'Data' ? 'default' : 'outline'} size="sm" onClick={() => setActiveTab('Data')}>Data</Button>
+          {/* Tabs */}
+          <div className="flex gap-2 mb-3">
+            <Button variant={activeTab === 'Logs' ? 'default' : 'outline'} size="sm"
+              onClick={() => setActiveTab('Logs')}>
+              Logs
+            </Button>
+            <Button variant={activeTab === 'Snapshots' ? 'default' : 'outline'} size="sm"
+              onClick={() => setActiveTab('Snapshots')}>
+              Snapshots
+            </Button>
+            <Button variant={activeTab === 'Data' ? 'default' : 'outline'} size="sm"
+              onClick={() => setActiveTab('Data')}>
+              Data
+            </Button>
             <Button size="sm" variant="secondary" className="ml-auto" onClick={toggleImpersonation}>
               {impersonating ? 'Exit Reader View' : 'Reader View'}
             </Button>
           </div>
 
+          {/* Tabs Content */}
           {activeTab === 'Logs' && (
             <>
               <input
@@ -80,13 +98,21 @@ const AdminConsole = ({ setImpersonationMode }) => {
               />
               <div className="text-xs mb-2">
                 <label className="mr-2">
-                  <input type="checkbox" checked={showLocal} onChange={() => setShowLocal(!showLocal)} /> Local Logs
+                  <input
+                    type="checkbox"
+                    checked={showLocal}
+                    onChange={() => setShowLocal(!showLocal)}
+                  /> Local Logs
                 </label>
                 <label>
-                  <input type="checkbox" checked={showRemote} onChange={() => setShowRemote(!showRemote)} /> Remote Logs
+                  <input
+                    type="checkbox"
+                    checked={showRemote}
+                    onChange={() => setShowRemote(!showRemote)}
+                  /> Remote Logs
                 </label>
               </div>
-              <div className="overflow-auto h-[70vh] text-xs">
+              <div className="overflow-auto h-[70vh] text-xs border border-gray-700 p-2">
                 {combinedLogs.length > 0
                   ? combinedLogs.map((log, i) => <div key={i} className="mb-1 break-words">{log}</div>)
                   : <p>No logs to display.</p>
@@ -99,7 +125,9 @@ const AdminConsole = ({ setImpersonationMode }) => {
           {activeTab === 'Data' && <DataManagementTab />}
         </div>
       ) : (
-        <Button className="fixed bottom-4 right-4 z-50" onClick={() => setIsOpen(true)}>Admin Console</Button>
+        <Button className="fixed bottom-4 right-4 z-50" onClick={() => setIsOpen(true)}>
+          Admin Console
+        </Button>
       )}
     </>
   );

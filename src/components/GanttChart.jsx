@@ -8,14 +8,19 @@ const GanttChart = ({ tasks, startDate, difficulty, holidays, completedTasks, to
 
   return (
     <table className="gantt-table">
-      <thead><tr><th>Task</th><th>Timeline</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Task</th>
+          <th>Timeline</th>
+        </tr>
+      </thead>
       <tbody>
         {Object.values(taskPositions).map(({ task, startDate, endDate }) => {
           const completed = completedTasks.includes(task.id);
           const canComplete = task.dependencies.every(dep => completedTasks.includes(dep));
 
           return (
-            <tr key={task.id}>
+            <tr key={task.id} className="hover:bg-gray-100">
               <td>
                 <label>
                   <input

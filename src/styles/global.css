@@ -1,46 +1,43 @@
 /* src/styles/global.css */
-
-
-/* Global resets and theming */
+/* Global resets and basic theming */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
-  body {
-    font-family: Arial, sans-serif;
-    background: #f9f9f9;
-    color: #333;
-    padding: 20px;
-  }
-  
-  .app-container {
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  
-  .btn {
-    background: #003660;
-    color: #fff;
-    border: none;
-    padding: 10px 16px;
-    margin: 5px;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: background 0.3s ease;
-  }
-  
-  .btn:hover {
-    background: #00294d;
-  }
-  
-  .btn-cancel {
-    background: #ccc;
-    color: #333;
-  }
-  
-  .btn-cancel:hover {
-    background: #aaa;
-  }
-  
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Nunito Sans', sans-serif;
+  background: #f9fafb;
+  color: #333;
+  padding: 20px;
+}
+
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.btn {
+  background: #003660;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  margin: 5px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background 0.3s ease;
+}
+
+.btn:hover {
+  background: #00294d;
+}
+
+.btn-cancel {
+  background: #ccc;
+  color: #333;
+}
+
+.btn-cancel:hover {
+  background: #aaa;
+}

@@ -1,15 +1,33 @@
 @import "tailwindcss";
 
 /* Tailwind v4 CSS-first theme configuration */
-@theme {
-  --colors: {
-    primary: #3366ff,
-    secondary: #f9fafb,
-    accent: #f97316
-  };
+@layer base {
+  :root {
+    --colors-primary: #003660;   /* UCSB Blue (Main Accent) */
+    --colors-secondary: #1178b5; /* PaCE Blue (Secondary Accent) */
+    --colors-accent: #febc11;    /* UCSB Gold (Contrasting Accent) */
+  }
+  .bg-primary {
+    background-color: var(--colors-primary);
+  }
+  .text-primary {
+    color: var(--colors-primary);
+  }
+  .bg-secondary {
+    background-color: var(--colors-secondary);
+  }
+  .text-secondary {
+    color: var(--colors-secondary);
+  }
+  .bg-accent {
+    background-color: var(--colors-accent);
+  }
+  .text-accent {
+    color: var(--colors-accent);
+  }
 }
 
-/* Optional: Use @layer utilities if needed */
+/* Optional additional utilities */
 @layer utilities {
   .bg-grid {
     background-image:
@@ -18,5 +36,5 @@
   }
 }
 
-/* Source scanning */
+/* Source scanning for Tailwind */
 @source "./src/**/*.{html,js,jsx,ts,tsx}";

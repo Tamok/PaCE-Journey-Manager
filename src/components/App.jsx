@@ -1,6 +1,6 @@
 // src/components/App.jsx
 import React, { useEffect, useState } from 'react';
-import AdminConsole from '../components/AdminConsole';
+import AdminConsole from './AdminConsole';
 import ImpersonationBanner from './ImpersonationBanner';
 import Timeline from './Timeline';
 import GoalDetails from './GoalDetails';
@@ -27,7 +27,7 @@ const App = () => {
   }, []);
 
   return (
-    <div className="min-h-screen p-4 text-white bg-primary">
+    <div className="min-h-screen p-4 bg-primary text-white">
       {impersonationMode && <ImpersonationBanner />}
       {user.role === 'admin' && <AdminConsole setImpersonationMode={setImpersonationMode} />}
       <h1 className="text-2xl mb-4">Welcome, {user.email || "Loading..."}</h1>

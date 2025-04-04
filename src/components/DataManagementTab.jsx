@@ -1,89 +1,140 @@
 // src/components/DataManagementTab.jsx
-
-import React, { useEffect, useState } from 'react';
-import { listSnapshots, createSnapshot, deleteSnapshot } from '../services/snapshotService';
+import React, { useState } from 'react';
 import { exportGoals, importGoals } from '../services/importExportService';
+import { wipeAllGoals } from '../services/goalService';
 import { Button } from './ui/button';
-import { CURRENT_DB_VERSION } from '../constants';
 import { logEvent } from '../services/logger';
 
 const DataManagementTab = () => {
-  const [snapshots, setSnapshots] = useState([]);
-  const [selected, setSelected] = useState(new Set());
   const [preview, setPreview] = useState(null);
   const [mode, setMode] = useState('replace');
-
-  useEffect(() => { refresh(); }, []);
-  const refresh = async () => setSnapshots(await listSnapshots());
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleFileDrop = async (e) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    const text = await file.text();
-    const json = JSON.parse(text);
-    setPreview(json);
-    logEvent('INFO', `Loaded import file: ${file.name}`);
+    await readImportFile(file);
+  };
+
+  const handleFileClick = (e) => {
+    e.preventDefault();
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json';
+    fileInput.onchange = async (evt) => {
+      const f = evt.target.files[0];
+      if (f) await readImportFile(f);
+    };
+    fileInput.click();
+  };
+
+  const readImportFile = async (file) => {
+    if (!file) return;
+    setIsLoading(true);
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      setPreview(json);
+      logEvent('INFO', `Loaded import file: ${file.name}`);
+    } catch (err) {
+      alert(`Invalid JSON file: ${err.message}`);
+    }
+    setIsLoading(false);
   };
 
   const handleImport = async () => {
-    await importGoals(preview, mode);
-    setPreview(null);
-    refresh();
+    if (!preview) return;
+    setIsLoading(true);
+    try {
+      await importGoals(preview, mode);
+      alert(`Import complete! (mode: ${mode})`);
+    } catch (err) {
+      alert(`Import error: ${err.message}`);
+    } finally {
+      setPreview(null);
+      setIsLoading(false);
+    }
   };
 
   const handleDownload = async () => {
-    const data = await exportGoals();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `pace-goals-export-${new Date().toISOString()}.json`;
-    a.click();
+    setIsLoading(true);
+    try {
+      const data = await exportGoals();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pace-goals-export-${new Date().toISOString()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(`Download error: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleWipeAll = async () => {
+    if (!window.confirm("Are you sure you want to delete ALL Goals data? This cannot be undone.")) return;
+    setIsLoading(true);
+    try {
+      await wipeAllGoals();
+      alert("All goals deleted successfully.");
+    } catch (err) {
+      alert(`Error wiping data: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div>
-      <div className="flex gap-2 mb-2">
-        <Button onClick={() => createSnapshot('Manual Snapshot').then(refresh)}>Save</Button>
-        <Button onClick={handleDownload}>Export</Button>
-        <label className="cursor-pointer border border-dashed p-2 rounded bg-white text-black"
-               onDrop={handleFileDrop} onDragOver={(e) => e.preventDefault()}>
-          Drop JSON Here
-        </label>
+      <div className="flex gap-2 mb-4">
+        <Button onClick={handleDownload} disabled={isLoading}>
+          {isLoading ? 'Loading...' : 'Download .JSON'}
+        </Button>
+        <Button variant="destructive" onClick={handleWipeAll} disabled={isLoading}>
+          {isLoading ? 'Wiping...' : 'Wipe All Data'}
+        </Button>
+      </div>
+
+      <div
+        className="cursor-pointer border border-dashed p-4 rounded bg-white text-black text-center"
+        onDrop={handleFileDrop}
+        onDragOver={(e) => e.preventDefault()}
+        onClick={handleFileClick}
+      >
+        {isLoading
+          ? 'Loading...'
+          : 'Drop JSON Here or Click to Browse'
+        }
       </div>
 
       {preview && (
-        <div className="bg-yellow-100 text-black p-2 border">
-          <p>Preview loaded file. Contains {preview.goals?.length || 0} goals. Version: {preview.version || 'N/A'}</p>
-          <select value={mode} onChange={(e) => setMode(e.target.value)}>
-            <option value="replace">Replace</option>
-            <option value="merge">Merge</option>
-          </select>
-          <Button onClick={handleImport}>Confirm Import</Button>
-          <Button variant="outline" onClick={() => setPreview(null)}>Cancel</Button>
+        <div className="bg-yellow-100 text-black p-2 border mt-4">
+          <p>
+            Preview loaded file. Contains {preview.goals?.length || 0} goals.
+            {preview.version && <> Version: {preview.version}</>}
+          </p>
+          <label className="mr-2">
+            Mode:
+            <select
+              value={mode}
+              onChange={(e) => setMode(e.target.value)}
+              className="ml-1 border"
+            >
+              <option value="replace">Replace</option>
+              <option value="merge">Merge</option>
+            </select>
+          </label>
+          <Button onClick={handleImport} disabled={isLoading}>
+            {isLoading ? 'Importing...' : 'Confirm Import'}
+          </Button>
+          <Button variant="outline" onClick={() => setPreview(null)} className="ml-2">
+            Cancel
+          </Button>
         </div>
       )}
-
-      <table className="w-full text-sm mt-4">
-        <thead>
-          <tr><th></th><th>Name</th><th>Version</th><th>Date</th><th></th></tr>
-        </thead>
-        <tbody>
-          {snapshots.map(s => (
-            <tr key={s.id}>
-              <td><input type="checkbox" checked={selected.has(s.id)} onChange={() => {
-                const newSet = new Set(selected);
-                newSet.has(s.id) ? newSet.delete(s.id) : newSet.add(s.id);
-                setSelected(newSet);
-              }} /></td>
-              <td>{s.name}</td>
-              <td>{s.version || 'unknown'}</td>
-              <td>{new Date(s.createdAt).toLocaleString()}</td>
-              <td><Button variant="destructive" size="sm" onClick={() => deleteSnapshot(s.id).then(refresh)}>Delete</Button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 };

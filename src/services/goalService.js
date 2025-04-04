@@ -1,7 +1,9 @@
 // src/services/journeyService.js
 import { v4 as uuidv4 } from 'uuid';
 import { db, auth } from './firebaseService';
-import { collection, onSnapshot, writeBatch, doc, getDocs } from 'firebase/firestore';
+import {
+  collection, onSnapshot, writeBatch, doc, getDocs, deleteDoc
+} from 'firebase/firestore';
 import { logEvent } from './logger';
 
 const COLLECTION_NAME = 'pace-goals';
@@ -25,8 +27,10 @@ export const persistGoals = async (goals) => {
   const colRef = collection(db, COLLECTION_NAME);
   const snapshot = await getDocs(colRef);
   
+  // Clear existing
   snapshot.forEach(docSnap => batch.delete(docSnap.ref));
 
+  // Insert new
   goals.forEach(goal => {
     const goalRef = doc(db, COLLECTION_NAME, goal.id);
     batch.set(goalRef, goal);
@@ -54,4 +58,13 @@ export const createGoal = (title, priority = 'Next', difficulty = 'Easy', note =
     createdAt: new Date().toISOString(),
     createdBy: auth.currentUser?.email || 'unknown'
   };
+};
+
+// Wipe all goals
+export const wipeAllGoals = async () => {
+  const snapshot = await getDocs(collection(db, COLLECTION_NAME));
+  for (const docSnap of snapshot.docs) {
+    await deleteDoc(docSnap.ref);
+  }
+  logEvent("INFO", "All goals wiped from Firestore.");
 };

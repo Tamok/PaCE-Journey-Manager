@@ -1,5 +1,13 @@
 // src/services/snapshotService.js
-import { collection, getDocs, doc, getDoc, setDoc, deleteDoc, addDoc } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc,
+  deleteDoc,
+  addDoc
+} from 'firebase/firestore';
 import { db, auth } from './firebaseService';
 import { CURRENT_DB_VERSION } from '../constants';
 import { logEvent } from './logger';
@@ -41,6 +49,12 @@ export const restoreSnapshot = async (snapshotId) => {
   }
 
   const { goals } = docSnap.data();
+  // Clear existing
+  const existing = await getDocs(collection(db, GOALS_COLLECTION));
+  for (const e of existing.docs) {
+    await deleteDoc(doc(db, GOALS_COLLECTION, e.id));
+  }
+  // Then restore
   for (const goal of goals) {
     const ref = doc(db, GOALS_COLLECTION, goal.id);
     await setDoc(ref, goal);
@@ -54,4 +68,23 @@ export const deleteSnapshot = async (snapshotId) => {
   const userEmail = auth.currentUser?.email || 'unknown';
   await deleteDoc(doc(db, SNAPSHOT_COLLECTION, snapshotId));
   logEvent('INFO', `Snapshot ${snapshotId} deleted.`, userEmail);
+};
+
+// Download snapshot as JSON
+export const downloadSnapshotAsJson = (snap) => {
+  const { goals, name, createdAt, version } = snap;
+  const data = {
+    name,
+    version,
+    createdAt,
+    goals
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${name.replace(/\s+/g, '_')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  logEvent('INFO', `Snapshot '${name}' downloaded.`);
 };

@@ -1,52 +1,53 @@
 .journey-details {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    padding: 20px;
-    margin-top: 20px;
-  }
-  
-  .journey-details h2 {
-    margin-bottom: 10px;
-  }
-  
-  .schedule-info p {
-    font-size: 0.9rem;
-    margin-bottom: 10px;
-  }
-  
-  .editable-fields label {
-    display: block;
-    margin-bottom: 8px;
-  }
-  
-  .note-section {
-    margin-top: 10px;
-  }
-  
-  .note-section span {
-    cursor: pointer;
-    padding: 4px;
-  }
-  
-  .gantt-chart {
-    margin-top: 20px;
-  }
-  
-  /* Gantt chart styles */
-  .gantt-container {
-    overflow-x: auto;
-  }
-  
-  .gantt-table {
-    border-collapse: collapse;
-    width: 100%;
-  }
-  
-  .gantt-table th,
-  .gantt-table td {
-    border: 1px solid #ddd;
-    padding: 6px;
-    text-align: center;
-  }
-  
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.journey-details h2 {
+  margin-bottom: 10px;
+  font-family: 'Nunito Sans', sans-serif;
+  color: #003660;
+}
+
+.schedule-info p {
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.editable-fields label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.note-section {
+  margin-top: 10px;
+}
+
+.note-section span {
+  cursor: pointer;
+  padding: 4px;
+}
+
+.gantt-chart {
+  margin-top: 20px;
+}
+
+/* Gantt chart styles */
+.gantt-container {
+  overflow-x: auto;
+}
+
+.gantt-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.gantt-table th,
+.gantt-table td {
+  border: 1px solid #ddd;
+  padding: 6px;
+  text-align: center;
+}

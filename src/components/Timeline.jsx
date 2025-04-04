@@ -25,30 +25,31 @@ const Timeline = ({ goalData, onSelectGoal, role }) => {
       goal.priority = PRIORITY_ORDER[Math.min(idx, PRIORITY_ORDER.length - 1)];
     });
 
-    scheduleGoals(reorderedGoals);  // reschedule based on new priorities
-    await persistGoals(reorderedGoals); // save changes to Firestore
+    scheduleGoals(reorderedGoals);
+    await persistGoals(reorderedGoals);
   };
 
-  const sortedGoals = goalData.sort(
-    (a, b) => PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority)
-  );
+  // Parent goals (those that do NOT have a parentId)
+  const parentGoals = goalData.filter(g => !g.parentId);
 
   return (
     <div className="timeline-container">
-      {sortedGoals.map((goal, idx) => (
-        <div
-          key={goal.id}
-          className={`timeline-item ${goal.priority.toLowerCase().replace(/ /g, '-')}`}
-          draggable={role === 'admin'}
-          onDragStart={(e) => handleDragStart(e, idx)}
-          onDrop={(e) => handleDrop(e, idx)}
-          onDragOver={(e) => e.preventDefault()}
-          onClick={() => onSelectGoal(goal)}
-        >
-          <strong>{goal.title}</strong>
-          <span className="priority-label">{goal.priority}</span>
-        </div>
-      ))}
+      {parentGoals.sort((a, b) => PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority))
+        .map((goal, idx) => (
+          <div
+            key={goal.id}
+            className={`timeline-item ${goal.priority.toLowerCase().replace(/ /g, '-')}`}
+            draggable={role === 'admin'}
+            onDragStart={(e) => handleDragStart(e, idx)}
+            onDrop={(e) => handleDrop(e, idx)}
+            onDragOver={(e) => e.preventDefault()}
+            onClick={() => onSelectGoal(goal)}
+          >
+            <strong>{goal.title}</strong>
+            <span className="priority-label">{goal.priority}</span>
+          </div>
+        ))
+      }
     </div>
   );
 };
