@@ -1,50 +1,54 @@
 // src/components/Timeline.jsx
 import React from 'react';
-import { toYMD } from '../services/scheduler';
-import '../styles/timeline.css';
+import { PRIORITY_ORDER } from '../constants';
+import { persistGoals } from '../services/goalService';
+import { scheduleGoals } from '../services/scheduler';
 
-const Timeline = ({ journeyData, onSelectJourney, role, onReorder }) => {
-  const topJourneys = journeyData.filter(journey => !journey.parentId);
-
-  const handleClick = (index) => {
-    onSelectJourney(index);
-  };
-
+const Timeline = ({ goalData, onSelectGoal, role }) => {
   const handleDragStart = (e, index) => {
     if (role !== 'admin') return;
-    e.dataTransfer.setData('text/plain', index);
+    e.dataTransfer.setData('goalIndex', index);
   };
 
-  const handleDrop = (e, dropIndex) => {
+  const handleDrop = async (e, targetIndex) => {
+    e.preventDefault();
     if (role !== 'admin') return;
-    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
-    if (dragIndex !== dropIndex) {
-      onReorder(dragIndex, dropIndex);
-    }
+
+    const draggedIndex = parseInt(e.dataTransfer.getData('goalIndex'), 10);
+    const reorderedGoals = [...goalData];
+
+    const [draggedGoal] = reorderedGoals.splice(draggedIndex, 1);
+    reorderedGoals.splice(targetIndex, 0, draggedGoal);
+
+    // Update priority based on new position
+    reorderedGoals.forEach((goal, idx) => {
+      goal.priority = PRIORITY_ORDER[Math.min(idx, PRIORITY_ORDER.length - 1)];
+    });
+
+    scheduleGoals(reorderedGoals);  // reschedule based on new priorities
+    await persistGoals(reorderedGoals); // save changes to Firestore
   };
+
+  const sortedGoals = goalData.sort(
+    (a, b) => PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority)
+  );
 
   return (
     <div className="timeline-container">
-      {topJourneys.map((journey, index) => {
-        const startDate = journey.scheduledStartDate ? new Date(journey.scheduledStartDate) : null;
-        const startStr = startDate ? startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
-        const fullDate = startDate ? startDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : '';
-        return (
-          <div
-            key={journey.id}
-            className={`timeline-item ${journey.completedDate ? 'completed' : ''} ${journey.priority.toLowerCase().replace(/ /g, '-')}`}
-            draggable={role === 'admin' && !journey.completedDate}
-            onDragStart={(e) => handleDragStart(e, index)}
-            onDrop={(e) => handleDrop(e, index)}
-            onDragOver={(e) => e.preventDefault()}
-            onClick={() => handleClick(index)}
-            title={fullDate}
-          >
-            <strong>{journey.title}</strong>
-            <span className="date-label">{startStr}</span>
-          </div>
-        );
-      })}
+      {sortedGoals.map((goal, idx) => (
+        <div
+          key={goal.id}
+          className={`timeline-item ${goal.priority.toLowerCase().replace(/ /g, '-')}`}
+          draggable={role === 'admin'}
+          onDragStart={(e) => handleDragStart(e, idx)}
+          onDrop={(e) => handleDrop(e, idx)}
+          onDragOver={(e) => e.preventDefault()}
+          onClick={() => onSelectGoal(goal)}
+        >
+          <strong>{goal.title}</strong>
+          <span className="priority-label">{goal.priority}</span>
+        </div>
+      ))}
     </div>
   );
 };

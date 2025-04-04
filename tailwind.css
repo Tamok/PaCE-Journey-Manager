@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+/* Tailwind v4 CSS-first theme configuration */
+@theme {
+  --colors: {
+    primary: #3366ff,
+    secondary: #f9fafb,
+    accent: #f97316
+  };
+}
+
+/* Optional: Use @layer utilities if needed */
+@layer utilities {
+  .bg-grid {
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 20px, #ddd 20px, #ddd 21px),
+      repeating-linear-gradient(90deg, transparent, transparent 20px, #ddd 20px, #ddd 21px);
+  }
+}
+
+/* Source scanning */
+@source "./src/**/*.{html,js,jsx,ts,tsx}";

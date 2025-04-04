@@ -1,109 +1,47 @@
 // src/components/App.jsx
 import React, { useEffect, useState } from 'react';
+import AdminConsole from '../components/AdminConsole';
+import ImpersonationBanner from './ImpersonationBanner';
 import Timeline from './Timeline';
-import JourneyDetails from './JourneyDetails';
-import AddJourneyForm from './AddJourneyForm';
-import FloatingLogConsole from './FloatingLogConsole';
-import LoginPage from './LoginPage';
-import ContactAdminPage from './ContactAdminPage';
-import { observeAuthState, loginWithGoogle } from '../services/firebaseService';
-import { subscribeToJourneys, saveJourneys } from '../services/journeyService';
-import { logEvent } from '../services/logger';
-import '../styles/global.css';
+import GoalDetails from './GoalDetails';
+import AddGoalForm from './AddGoalForm';
+import { subscribeToGoals } from '../services/goalService';
+import { PRIORITY_ORDER } from '../constants';
+import { auth } from '../services/firebaseService';
 
 const App = () => {
-  const [user, setUser] = useState(null);
-  const [isWhitelisted, setIsWhitelisted] = useState(false);
-  const [role, setRole] = useState('reader');
-  const [selectedJourneyIndex, setSelectedJourneyIndex] = useState(null);
-  const [journeyData, setJourneyData] = useState([]);
+  const [goalData, setGoalData] = useState([]);
+  const [selectedGoal, setSelectedGoal] = useState(null);
+  const [impersonationMode, setImpersonationMode] = useState(false);
+  const [user, setUser] = useState({ email: '', role: 'reader' });
 
   useEffect(() => {
-    const unsubscribe = observeAuthState((u) => {
-      setUser(u);
-      if (u) {
-        const email = u.email.toLowerCase();
-        const whitelistRegex = /@(?:[\w-]+\.)?ucsb\.edu$/;
-        if (whitelistRegex.test(email)) {
-          setIsWhitelisted(true);
-          // Compute role locally
-          const computedRole =
-            email.startsWith("j_engeln@") ||
-            email.startsWith("lawrence.chen@") ||
-            email.startsWith("kent.johnson@")
-              ? "admin"
-              : "reader";
-          setRole(computedRole);
-          logEvent("INFO", `User ${u.email} authenticated as ${computedRole}.`);
-        } else {
-          setIsWhitelisted(false);
-          logEvent("WARN", `User ${u.email} is not whitelisted.`);
-        }
-      } else {
-        setIsWhitelisted(false);
-      }
+    auth.onAuthStateChanged(u => {
+      setUser({ email: u?.email, role: u?.email.endsWith('@ucsb.edu') ? 'admin' : 'reader' });
     });
-    return () => unsubscribe();
-  }, []);
-  
 
-  // Realtime subscription to journeys
-  useEffect(() => {
-    const unsubscribeJourneys = subscribeToJourneys((data) => {
-      setJourneyData(data);
-      logEvent("INFO", "Realtime journey data updated.");
+    const unsubGoals = subscribeToGoals(data => {
+      setGoalData(data.sort((a, b) => PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority)));
     });
-    return () => unsubscribeJourneys();
+    return unsubGoals;
   }, []);
-
-  const persistJourneyData = async (data) => {
-    setJourneyData(data);
-    await saveJourneys(data);
-    logEvent("INFO", "Journey data saved to cloud.");
-  };
-
-  const handleReorder = (fromIndex, toIndex) => {
-    const updated = [...journeyData];
-    const [moved] = updated.splice(fromIndex, 1);
-    updated.splice(toIndex, 0, moved);
-    persistJourneyData(updated);
-    logEvent("INFO", `Reordered journey "${moved.title}" from index ${fromIndex} to ${toIndex}.`);
-  };
-
-  const handleAddJourney = (newJourney) => {
-    const updated = [...journeyData, newJourney];
-    persistJourneyData(updated);
-    logEvent("INFO", `Added new journey: "${newJourney.title}".`);
-  };
-
-  if (!user) {
-    return <LoginPage onLogin={loginWithGoogle} />;
-  }
-  if (!isWhitelisted) {
-    return <ContactAdminPage />;
-  }
 
   return (
-    <div className="app-container">
-      <h1>PaCE Journey Manager</h1>
-      <AddJourneyForm onAddJourney={handleAddJourney} role={role} />
-      <Timeline
-        journeyData={journeyData}
-        onSelectJourney={setSelectedJourneyIndex}
-        role={role}
-        onReorder={handleReorder}
-      />
-      {selectedJourneyIndex !== null && (
-        <JourneyDetails
-          journey={journeyData[selectedJourneyIndex]}
-          journeyData={journeyData}
-          setJourneyData={persistJourneyData}
-          role={role}
-        />
+    <div className="min-h-screen p-4 text-white bg-primary">
+      {impersonationMode && <ImpersonationBanner />}
+      {user.role === 'admin' && <AdminConsole setImpersonationMode={setImpersonationMode} />}
+      <h1 className="text-2xl mb-4">Welcome, {user.email || "Loading..."}</h1>
+      {goalData.length === 0 ? (
+        <p className="text-lg">No goals found in Firestore. Add one to get started.</p>
+      ) : (
+        <>
+          <Timeline goalData={goalData} onSelectGoal={setSelectedGoal} role={impersonationMode ? 'reader' : user.role} />
+          {selectedGoal && <GoalDetails goal={selectedGoal} holidays={[]} />}
+        </>
       )}
-      <FloatingLogConsole />
+      {!impersonationMode && user.role === 'admin' && <AddGoalForm />}
     </div>
-  );
+  );  
 };
 
 export default App;
