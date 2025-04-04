@@ -27,7 +27,8 @@ const App = () => {
   }, []);
 
   return (
-    <div className="min-h-screen p-4 bg-primary text-white">
+    // Apply overlay-bg to add a transparent background with blur effect.
+    <div className="min-h-screen p-4 bg-primary text-white overlay-bg">
       {impersonationMode && <ImpersonationBanner />}
       {user.role === 'admin' && <AdminConsole setImpersonationMode={setImpersonationMode} />}
       <h1 className="text-2xl mb-4">Welcome, {user.email || "Loading..."}</h1>

@@ -12,7 +12,7 @@ import { Button } from './ui/button';
 const SnapshotsTab = () => {
   const [snapshots, setSnapshots] = useState([]);
   const [newName, setNewName] = useState('');
-  const [searchText, setSearchText] = useState('');
+  // Sorting state managed via header clicks
   const [sortKey, setSortKey] = useState('createdAt');
   const [sortDir, setSortDir] = useState('desc');
   const [selected, setSelected] = useState(new Set());
@@ -21,6 +21,7 @@ const SnapshotsTab = () => {
 
   useEffect(() => { refresh(); }, []);
 
+  // Create a new snapshot
   const handleCreate = async () => {
     if (!newName.trim()) return;
     await createSnapshot(newName);
@@ -28,23 +29,70 @@ const SnapshotsTab = () => {
     refresh();
   };
 
+  // Restore a snapshot after confirmation
   const handleRestore = async (snap) => {
     if (!window.confirm(`Are you sure you want to restore snapshot "${snap.name}"?`)) return;
     await restoreSnapshot(snap.id);
     alert(`Snapshot "${snap.name}" restored successfully.`);
   };
 
+  // Delete a snapshot after confirmation
   const handleDelete = async (snap) => {
     if (!window.confirm(`Delete snapshot "${snap.name}"? This cannot be undone.`)) return;
     await deleteSnapshot(snap.id);
     refresh();
   };
 
+  // Download a snapshot as JSON
   const handleDownload = (snap) => {
     downloadSnapshotAsJson(snap);
   };
 
-  // Basic sorting
+  // Handle select all checkbox in header
+  const handleSelectAllChange = (e) => {
+    if (e.target.checked) {
+      setSelected(new Set(snapshots.map(s => s.id)));
+    } else {
+      setSelected(new Set());
+    }
+  };
+
+  // Toggle individual snapshot selection
+  const toggleSelect = (id) => {
+    const newSet = new Set(selected);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelected(newSet);
+  };
+
+  // Toggle sorting when clicking on header cells
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  // Bulk action handlers for selected snapshots
+  const handleBulkDownload = () => {
+    sorted.filter(s => selected.has(s.id)).forEach(snap => downloadSnapshotAsJson(snap));
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete the selected snapshots? This cannot be undone.")) return;
+    for (let snap of sorted.filter(s => selected.has(s.id))) {
+      await deleteSnapshot(snap.id);
+    }
+    refresh();
+    setSelected(new Set());
+  };
+
+  // Sort snapshots based on the selected sort key and direction
   const sorted = [...snapshots].sort((a, b) => {
     if (sortKey === 'createdAt') {
       const ad = new Date(a.createdAt).getTime();
@@ -54,31 +102,18 @@ const SnapshotsTab = () => {
       return sortDir === 'asc'
         ? (a.version || '').localeCompare(b.version || '')
         : (b.version || '').localeCompare(a.version || '');
-    } else {
-      // fallback: name
+    } else if (sortKey === 'name') {
       return sortDir === 'asc'
         ? a.name.localeCompare(b.name)
         : b.name.localeCompare(a.name);
     }
+    return 0;
   });
-
-  // Basic search filter
-  const filtered = sorted.filter(s =>
-    s.name.toLowerCase().includes(searchText.toLowerCase()) ||
-    (s.version || '').toLowerCase().includes(searchText.toLowerCase())
-  );
-
-  const toggleSelectAll = () => {
-    if (selected.size < filtered.length) {
-      setSelected(new Set(filtered.map(s => s.id)));
-    } else {
-      setSelected(new Set());
-    }
-  };
 
   return (
     <div>
-      <div className="flex gap-2 mb-2">
+      {/* Snapshot creation */}
+      <div className="flex gap-2 mb-4">
         <input
           placeholder="Snapshot name"
           value={newName}
@@ -88,58 +123,48 @@ const SnapshotsTab = () => {
         <Button onClick={handleCreate}>Create</Button>
       </div>
 
-      <div className="flex gap-2 mb-2 items-center">
-        <input
-          type="text"
-          className="border p-1"
-          placeholder="Search snapshots..."
-          value={searchText}
-          onChange={e => setSearchText(e.target.value)}
-        />
-        <select
-          value={sortKey}
-          onChange={e => setSortKey(e.target.value)}
-          className="border p-1"
-        >
-          <option value="createdAt">Date</option>
-          <option value="name">Name</option>
-          <option value="version">Version</option>
-        </select>
-        <select
-          value={sortDir}
-          onChange={e => setSortDir(e.target.value)}
-          className="border p-1"
-        >
-          <option value="asc">Ascending</option>
-          <option value="desc">Descending</option>
-        </select>
-        <Button variant="outline" onClick={toggleSelectAll}>Select All</Button>
-      </div>
+      {/* Bulk action buttons shown when all snapshots are selected */}
+      {selected.size === snapshots.length && snapshots.length > 0 && (
+        <div className="flex gap-2 my-2">
+          <Button variant="outline" onClick={handleBulkDownload}>
+            Download All
+          </Button>
+          <Button variant="destructive" onClick={handleBulkDelete}>
+            Delete All
+          </Button>
+        </div>
+      )}
 
       <table className="w-full text-sm mt-2">
         <thead>
           <tr>
-            <th></th>
-            <th>Name</th>
-            <th>Version</th>
-            <th>Date</th>
+            <th>
+              <input
+                type="checkbox"
+                checked={selected.size === snapshots.length && snapshots.length > 0}
+                onChange={handleSelectAllChange}
+              />
+            </th>
+            <th onClick={() => handleSort('name')} className="cursor-pointer">
+              Name {sortKey === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+            </th>
+            <th onClick={() => handleSort('version')} className="cursor-pointer">
+              Version {sortKey === 'version' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+            </th>
+            <th onClick={() => handleSort('createdAt')} className="cursor-pointer">
+              Date {sortKey === 'createdAt' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+            </th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {filtered.map(snap => (
-            <tr key={snap.id}>
+          {sorted.map(snap => (
+            <tr key={snap.id} className="hover:bg-gray-100">
               <td>
                 <input
                   type="checkbox"
                   checked={selected.has(snap.id)}
-                  onChange={() => {
-                    const newSet = new Set(selected);
-                    newSet.has(snap.id)
-                      ? newSet.delete(snap.id)
-                      : newSet.add(snap.id);
-                    setSelected(newSet);
-                  }}
+                  onChange={() => toggleSelect(snap.id)}
                 />
               </td>
               <td>{snap.name}</td>
@@ -158,7 +183,7 @@ const SnapshotsTab = () => {
               </td>
             </tr>
           ))}
-          {filtered.length === 0 && (
+          {sorted.length === 0 && (
             <tr>
               <td colSpan={5} className="text-center text-gray-500 p-2">
                 No snapshots found.

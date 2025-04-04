@@ -12,10 +12,8 @@ const AdminConsole = ({ setImpersonationMode }) => {
   const [activeTab, setActiveTab] = useState('Logs');
   const [localLogs, setLocalLogs] = useState(getStoredLogs());
   const [remoteLogs, setRemoteLogs] = useState([]);
-  // Default to only remote logs
   const [showLocal, setShowLocal] = useState(false);
   const [showRemote, setShowRemote] = useState(true);
-
   const [filterText, setFilterText] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [impersonating, setImpersonating] = useState(false);
@@ -54,7 +52,8 @@ const AdminConsole = ({ setImpersonationMode }) => {
     <>
       {impersonating && <ImpersonationBanner />}
       {isOpen ? (
-        <div className="fixed top-0 right-0 w-96 h-full bg-gray-900 text-white p-4 overflow-auto z-50 shadow-xl">
+        // Updated container width to ensure no horizontal scroll and better layout.
+        <div className="fixed top-0 right-0 w-[600px] max-w-full h-full bg-gray-900 text-white p-4 overflow-auto z-50 shadow-xl">
           <div className="flex justify-between items-center mb-2">
             <span className="font-bold text-lg">Admin Console</span>
             <div>

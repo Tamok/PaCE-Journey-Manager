@@ -1,11 +1,12 @@
-// src/components/JourneyDetails.jsx
+// src/components/GoalDetails.jsx
 import React, { useState } from 'react';
 import { journeyTemplate } from '../services/taskTemplates';
 import GanttChart from './GanttChart';
 import { calculateCompletion } from '../services/taskCompletion';
 import { calculateTaskPositions } from '../services/taskScheduler';
+import { TIMELINE_START_DATE } from '../constants';
 
-const GoalDetails = ({ goal, holidays, allGoals }) => {
+const GoalDetails = ({ goal, holidays, allGoals = [] }) => {
   const [completedTasks, setCompletedTasks] = useState([]);
 
   const toggleTaskCompletion = (taskId) => {
@@ -14,11 +15,18 @@ const GoalDetails = ({ goal, holidays, allGoals }) => {
     );
   };
 
-  const taskPositions = calculateTaskPositions(journeyTemplate, goal.scheduledStartDate, goal.difficulty, holidays);
+  // Ensure goal.scheduledStartDate is valid; fallback to default if not.
+  let startDate = new Date(goal.scheduledStartDate);
+  if (isNaN(startDate.getTime())) {
+    console.error("Invalid goal.scheduledStartDate", goal.scheduledStartDate, "Defaulting to TIMELINE_START_DATE");
+    startDate = new Date(TIMELINE_START_DATE);
+  }
+
+  const taskPositions = calculateTaskPositions(journeyTemplate, startDate, goal.difficulty, holidays);
   const completionPercentage = calculateCompletion(taskPositions, completedTasks);
 
-  // Gather subgoals
-  const subgoals = allGoals.filter(g => g.parentId === goal.id);
+  // Safely filter subgoals
+  const subgoals = (allGoals || []).filter(g => g.parentId === goal.id);
 
   return (
     <div className="journey-details p-4 bg-white text-black rounded shadow my-4">
@@ -29,7 +37,7 @@ const GoalDetails = ({ goal, holidays, allGoals }) => {
 
       <GanttChart
         tasks={journeyTemplate}
-        startDate={goal.scheduledStartDate}
+        startDate={startDate}
         difficulty={goal.difficulty}
         holidays={holidays}
         completedTasks={completedTasks}
@@ -37,7 +45,6 @@ const GoalDetails = ({ goal, holidays, allGoals }) => {
       />
       <div className="mt-2">Completion: {completionPercentage}%</div>
 
-      {/* Subgoals listed below */}
       {subgoals.length > 0 && (
         <div className="mt-4">
           <h3 className="font-bold mb-2">Subgoals:</h3>
