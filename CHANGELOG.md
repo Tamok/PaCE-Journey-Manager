@@ -1,48 +1,53 @@
-# CHANGELOG
+# Changelog
 
-## [2.0.0]– Major Refactor and Feature Enhancement
+All notable changes to the PaCE Journey Manager project will be documented in this file.
 
-### New Features & Enhancements
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-- **React Migration & Vite Integration:**
-  - Migrated from a plain JavaScript codebase to a modern React application.
-  - Set up the project using Vite for fast development and optimized builds.
-  - Reorganized the project structure into clear folders for components, services, and styles.
-
-- **Firebase Authentication:**
-  - Integrated Firebase Authentication with Google Sign‑In.
-  - Ensured proper popup behavior by verifying Firebase configuration and browser settings.
-
-- **Whitelist & Admin Access:**
-  - Enforced whitelist rules so that only users with emails ending in `@ucsb.edu` or any subdomain (e.g., `@subdomain.ucsb.edu`) are allowed access.
-  - Designated default admin users by requiring their email to be whitelisted and start with `j_engeln@`, `lawrence.chen@`, or `kent.johnson@`.
-  - All other whitelisted users are granted reader access (with limited interactivity).
-
-- **Modular Logging:**
-  - Created a reusable logger module to log events consistently across the app.
-  - Implemented a floating log console accessible via a bottom‑right button for real‑time log monitoring.
-
-- **Component & CSS Modularization:**
-  - Broke down the UI into separate React components for a clean, maintainable structure.
-  - Split CSS into modular files (`global.css`, `timeline.css`, `journeyDetails.css`) to keep each file under 300 lines and maintain a consistent naming convention.
-
-### Bug Fixes
-
-- Fixed dependency issues by updating `index.html` to load the correct entry point (`src/main.jsx` instead of the old `js/app.js`).
-- Resolved an issue with the Google login popup closing immediately by verifying Firebase configuration and ensuring that popups aren’t blocked.
-
-## [1.0.0]
+## [2.0.0] - 2025-04-05
 ### Added
-- Renamed `firebase-config-template.js` to `firebase-config.sample.js` for clarity.
-- Added this CHANGELOG with semantic versioning (v1.0.0 initial release).
-- Integrated Vite for fast prototyping via a new `vite.config.js` file and updated build scripts.
-- Added a new `logger.js` module for consistent logging across the app.
-- Added a floating log console via `logConsole.js` (a vanilla JS implementation).
-- Added a new `firebaseService.js` module to handle Firebase Authentication.
-- Integrated Firebase Authentication and whitelist access control in `app.js` with distinct admin (full access) and reader (view‑only) modes.
-- Added a fallback “contact the page administrator” view for non‑whitelisted users.
+- React migration with Vite for modern development experience
+- Firebase Authentication with Google Sign-In
+- Whitelist enforcement for `@ucsb.edu` email domains
+- Role-based access control (admin vs. reader)
+- Admin console for monitoring application state
+- Modular logging system with real-time log console
+- Timeline component with drag-and-drop reordering
+- Goal details component with Gantt chart visualization
+- Sub-goals support with parent-child relationships
+- Data management tools for import/export
+- Snapshot system for saving application state
+- Holiday calendar integration for task scheduling
 
 ### Changed
-- Updated `app.js` to observe authentication state, enforce whitelist checks, and adjust the UI accordingly.
-- Inserted calls to `logEvent()` in key operations (initialization, data loading/saving, timeline reordering, etc.).
-- Renamed and adjusted file names and comments for improved clarity and modularity.
+- Complete refactoring from vanilla JS to React component architecture
+- Improved UI with consistent styling using Tailwind CSS
+- Enhanced project structure with clear separation of concerns
+- Modernized build system using Vite instead of manual script loading
+- Updated task scheduling algorithms for better accuracy
+
+### Fixed
+- Login popup closing immediately due to incorrect Firebase configuration
+- Timeline sorting order for priority display
+- Task completion calculation when handling different task types
+- Date handling issues with task scheduling across holidays
+
+## [1.0.0] - 2024-11-01
+### Added
+- Initial release with vanilla JavaScript implementation
+- Firebase integration for data persistence
+- Basic timeline visualization
+- Simple Gantt chart for task tracking
+- Renamed `firebase-config-template.js` to `firebase-config.sample.js`
+- Integrated Vite for development
+- Added `logger.js` module for consistent logging
+- Added floating log console
+- Added `firebaseService.js` for Authentication
+- Whitelist access control with admin and reader modes
+- Contact administrator fallback view
+
+### Changed
+- Updated authentication flow in `app.js`
+- Enhanced logging throughout application
+- Improved file naming conventions
