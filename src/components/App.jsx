@@ -8,6 +8,8 @@ import AddGoalForm from './AddGoalForm';
 import { subscribeToGoals } from '../services/goalService';
 import { PRIORITY_ORDER } from '../constants';
 import { auth } from '../services/firebaseService';
+import { scheduleGoals } from '../services/scheduler';
+import { persistGoals } from '../services/goalService';
 
 const App = () => {
   const [goalData, setGoalData] = useState([]);
@@ -17,32 +19,81 @@ const App = () => {
 
   useEffect(() => {
     auth.onAuthStateChanged(u => {
-      setUser({ email: u?.email, role: u?.email.endsWith('@ucsb.edu') ? 'admin' : 'reader' });
+      const email = u?.email || '';
+      // Simple check for admin privileges
+      const isAdmin = email.endsWith('@ucsb.edu');
+      setUser({ email, role: isAdmin ? 'admin' : 'reader' });
     });
 
     const unsubGoals = subscribeToGoals(data => {
-      setGoalData(data.sort((a, b) => PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority)));
+      // Self-sort by priority
+      const sorted = [...data].sort(
+        (a, b) => PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority)
+      );
+      setGoalData(sorted);
     });
     return unsubGoals;
   }, []);
 
+  const handleSelectGoal = (goal) => {
+    setSelectedGoal(goal);
+  };
+
+  // For drag-and-drop reorder
+  const handleReorder = async (updatedGoals) => {
+    scheduleGoals(updatedGoals);
+    await persistGoals(updatedGoals);
+    setGoalData([...updatedGoals]);
+  };
+
   return (
-    // Apply overlay-bg to add a transparent background with blur effect.
-    <div className="min-h-screen p-4 bg-primary text-white overlay-bg">
+    <div className="min-h-screen p-4 bg-primary text-white">
       {impersonationMode && <ImpersonationBanner />}
       {user.role === 'admin' && <AdminConsole setImpersonationMode={setImpersonationMode} />}
-      <h1 className="text-2xl mb-4">Welcome, {user.email || "Loading..."}</h1>
+
+      {/* Header with hotlinked UCSB logo */}
+      <header className="flex items-center mb-4">
+        <a href="https://www.ucsb.edu" target="_blank" rel="noreferrer">
+          <img
+            src="https://www.professional.ucsb.edu/sites/default/files/PaceLogos/Thing_Plain.png"
+            alt="UCSB Logo"
+            className="h-12 mr-4"
+          />
+        </a>
+        <h1 className="text-2xl text-blue-900">PaCE Journey Manager</h1>
+      </header>
+
       {goalData.length === 0 ? (
-        <p className="text-lg">No goals found in Firestore. Add one to get started.</p>
+        <p className="text-lg">No goals found. Add one to get started.</p>
       ) : (
         <>
-          <Timeline goalData={goalData} onSelectGoal={setSelectedGoal} role={impersonationMode ? 'reader' : user.role} />
-          {selectedGoal && <GoalDetails goal={selectedGoal} holidays={[]} />}
+          <Timeline
+            goalData={goalData}
+            onSelectGoal={handleSelectGoal}
+            role={impersonationMode ? 'reader' : user.role}
+            onReorder={handleReorder}
+          />
+          {selectedGoal && (
+            <GoalDetails
+              goal={selectedGoal}
+              allGoals={goalData}
+              role={impersonationMode ? 'reader' : user.role}
+              onClose={() => setSelectedGoal(null)}
+              onGoalsUpdate={setGoalData}
+            />
+          )}
         </>
       )}
-      {!impersonationMode && user.role === 'admin' && <AddGoalForm />}
+
+      { !impersonationMode && user.role === 'admin' && (
+        <AddGoalForm
+          goals={goalData}
+          setGoals={setGoalData}
+          role={user.role}
+        />
+      )}
     </div>
-  );  
+  );
 };
 
 export default App;

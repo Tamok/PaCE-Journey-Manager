@@ -8,7 +8,6 @@ import {
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// Replace the placeholder values with your Firebase project configuration.
 const firebaseConfig = {
   apiKey: "AIzaSyDPMU8P8H5X9eMRnwfmvpR2P6MwW4UPma8",
   authDomain: "pace-journey-manager-ef66a.firebaseapp.com",

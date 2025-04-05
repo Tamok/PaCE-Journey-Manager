@@ -10,13 +10,17 @@ export const canCompleteTask = (taskId, taskPositions, completedTasks) => {
 
 // Calculates weighted completion
 export const calculateCompletion = (taskPositions, completedTasks) => {
-  const totalWeight = Object.values(taskPositions).reduce((sum, { task }) => (
-    sum + (task.isApproval ? taskWeights.approval : taskWeights.regular)
-  ), 0);
+  if (!taskPositions || Object.keys(taskPositions).length === 0) {
+    return 0;
+  }
+  const totalWeight = Object.values(taskPositions).reduce((sum, { task }) => {
+    return sum + (task.isApproval ? taskWeights.approval : taskWeights.regular);
+  }, 0);
 
-  const completedWeight = completedTasks.reduce((sum, taskId) => (
-    sum + (taskPositions[taskId].task.isApproval ? taskWeights.approval : taskWeights.regular)
-  ), 0);
+  const completedWeight = completedTasks.reduce((sum, taskId) => {
+    if (!taskPositions[taskId]) return sum;
+    return sum + (taskPositions[taskId].task.isApproval ? taskWeights.approval : taskWeights.regular);
+  }, 0);
 
   return Math.round((completedWeight / totalWeight) * 100);
 };

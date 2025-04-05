@@ -1,9 +1,11 @@
+/* src/styles/timeline.css */
 .timeline-container {
   display: flex;
   gap: 10px;
   margin-bottom: 30px;
   overflow-x: auto;
   padding: 20px;
+  background-color: #ffffff; /* White background as in v1 */
 }
 
 .timeline-item {
@@ -14,27 +16,22 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
-  text-align: center;
+  align-items: flex-start;
+  padding-left: 10px;
   cursor: pointer;
   border: 3px solid;
-  background: #fff;
+  background: #ffffff;
   transition: transform 0.3s ease, background 0.3s ease;
+  color: #003660;
 }
 
 .timeline-item:hover {
   transform: scale(1.1);
-  background: #f0f0f0;
-}
-
-.timeline-item.completed {
-  border-color: #999;
-  background: #ccc;
-  color: #444;
+  background: #f9f9f9;
 }
 
 .timeline-item.critical {
-  border-color: #003660;
+  border-color: #c53030;
 }
 
 .timeline-item.important {
@@ -49,6 +46,10 @@
   border-color: #999;
 }
 
-.date-label {
-  font-size: 0.85rem;
+.priority-label {
+  font-size: 0.75rem;
+  margin-top: 4px;
+  background: rgba(0,0,0,0.1);
+  padding: 2px 4px;
+  border-radius: 4px;
 }

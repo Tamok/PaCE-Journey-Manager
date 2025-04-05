@@ -7,7 +7,7 @@ export const setRemoteLogger = (fn) => remoteLogger = fn;
 export const logEvent = async (tag, message, userEmail = "") => {
   const timestamp = new Date().toISOString();
   const logEntry = `[${timestamp}][${tag}] ${message}`;
-  
+
   console.log(logEntry);
   saveLocalLog(logEntry);
   window.dispatchEvent(new CustomEvent('log-message', { detail: logEntry }));

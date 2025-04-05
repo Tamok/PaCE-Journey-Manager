@@ -38,6 +38,7 @@
 /* Gantt chart styles */
 .gantt-container {
   overflow-x: auto;
+  margin-bottom: 1rem;
 }
 
 .gantt-table {

@@ -1,5 +1,5 @@
 // src/services/holidayGenerator.js
-import { toYMD, addDays, parseDate, getCalendarWeek } from "./scheduler";
+import { toYMD, addDays, parseDate } from "./dateUtils";
 
 function getLastWeekdayOfMonth(year, month, weekday) {
   const lastDay = new Date(year, month, 0);

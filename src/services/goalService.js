@@ -1,8 +1,8 @@
-// src/services/journeyService.js
+// src/services/goalService.js
 import { v4 as uuidv4 } from 'uuid';
 import { db, auth } from './firebaseService';
 import {
-  collection, onSnapshot, writeBatch, doc, getDocs, deleteDoc
+  collection, onSnapshot, writeBatch, doc, getDocs, deleteDoc, setDoc
 } from 'firebase/firestore';
 import { logEvent } from './logger';
 
@@ -20,13 +20,13 @@ export const subscribeToGoals = (callback) => {
   });
 };
 
-// Persist Goals to Firestore
+// Persist an entire array of goals (batch replace)
 export const persistGoals = async (goals) => {
   const userEmail = auth.currentUser?.email || 'unknown';
   const batch = writeBatch(db);
   const colRef = collection(db, COLLECTION_NAME);
   const snapshot = await getDocs(colRef);
-  
+
   // Clear existing
   snapshot.forEach(docSnap => batch.delete(docSnap.ref));
 
@@ -52,12 +52,27 @@ export const createGoal = (title, priority = 'Next', difficulty = 'Easy', note =
     priority,
     difficulty,
     note,
+    podioLink: '',
+    zohoLink: '',
     completedDate: null,
     scheduledStartDate: null,
-    subGoals: [],
+    parentId: null,
     createdAt: new Date().toISOString(),
     createdBy: auth.currentUser?.email || 'unknown'
   };
+};
+
+// Update a single goal in Firestore (overwrites the doc)
+export const updateGoal = async (goal) => {
+  const userEmail = auth.currentUser?.email || 'unknown';
+  try {
+    const ref = doc(db, COLLECTION_NAME, goal.id);
+    await setDoc(ref, goal);
+    logEvent("INFO", `Goal ${goal.id} updated successfully.`, userEmail);
+  } catch (error) {
+    logEvent("ERROR", `Failed to update goal ${goal.id}: ${error.message}`, userEmail);
+    throw error;
+  }
 };
 
 // Wipe all goals

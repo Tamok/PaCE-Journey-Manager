@@ -3,8 +3,14 @@ import React from 'react';
 import { PRIORITY_ORDER } from '../constants';
 import { persistGoals } from '../services/goalService';
 import { scheduleGoals } from '../services/scheduler';
+import '../styles/timeline.css';
 
-const Timeline = ({ goalData, onSelectGoal, role }) => {
+const Timeline = ({ goalData, onSelectGoal, role, onReorder }) => {
+  // Self-sort goals by priority
+  const sortedGoals = [...goalData].sort(
+    (a, b) => PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority)
+  );
+
   const handleDragStart = (e, index) => {
     if (role !== 'admin') return;
     e.dataTransfer.setData('goalIndex', index);
@@ -15,7 +21,7 @@ const Timeline = ({ goalData, onSelectGoal, role }) => {
     if (role !== 'admin') return;
 
     const draggedIndex = parseInt(e.dataTransfer.getData('goalIndex'), 10);
-    const reorderedGoals = [...goalData];
+    const reorderedGoals = [...sortedGoals];
 
     const [draggedGoal] = reorderedGoals.splice(draggedIndex, 1);
     reorderedGoals.splice(targetIndex, 0, draggedGoal);
@@ -27,15 +33,16 @@ const Timeline = ({ goalData, onSelectGoal, role }) => {
 
     scheduleGoals(reorderedGoals);
     await persistGoals(reorderedGoals);
+    onReorder(reorderedGoals);
   };
 
-  // Parent goals (those that do NOT have a parentId)
-  const parentGoals = goalData.filter(g => !g.parentId);
-
   return (
-    <div className="timeline-container">
-      {parentGoals.sort((a, b) => PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority))
-        .map((goal, idx) => (
+    <div className="timeline-container" style={{ backgroundColor: "#ffffff" }}>
+      {sortedGoals.map((goal, idx) => {
+        const completionEstimate = goal.scheduledEndDate
+          ? new Date(goal.scheduledEndDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+          : '';
+        return (
           <div
             key={goal.id}
             className={`timeline-item ${goal.priority.toLowerCase().replace(/ /g, '-')}`}
@@ -45,11 +52,16 @@ const Timeline = ({ goalData, onSelectGoal, role }) => {
             onDragOver={(e) => e.preventDefault()}
             onClick={() => onSelectGoal(goal)}
           >
-            <strong>{goal.title}</strong>
-            <span className="priority-label">{goal.priority}</span>
+            <div style={{ textAlign: 'left', width: '100%', paddingLeft: '10px' }}>
+              <strong>{goal.title}</strong>
+              <div className="priority-label">{goal.priority}</div>
+              <div style={{ fontSize: '0.85rem', color: '#003660', marginTop: '4px' }}>
+                {completionEstimate}
+              </div>
+            </div>
           </div>
-        ))
-      }
+        );
+      })}
     </div>
   );
 };

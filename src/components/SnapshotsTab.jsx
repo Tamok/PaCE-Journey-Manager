@@ -135,51 +135,65 @@ const SnapshotsTab = () => {
         </div>
       )}
 
-      <table className="w-full text-sm mt-2">
-        <thead>
+      <table className="w-full text-sm mt-2 border border-gray-300 rounded">
+        <thead className="bg-gray-200">
           <tr>
-            <th>
+            <th className="p-2">
               <input
                 type="checkbox"
                 checked={selected.size === snapshots.length && snapshots.length > 0}
                 onChange={handleSelectAllChange}
               />
             </th>
-            <th onClick={() => handleSort('name')} className="cursor-pointer">
+            <th
+              onClick={() => handleSort('name')}
+              className="cursor-pointer p-2"
+            >
               Name {sortKey === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
             </th>
-            <th onClick={() => handleSort('version')} className="cursor-pointer">
+            <th
+              onClick={() => handleSort('version')}
+              className="cursor-pointer p-2"
+            >
               Version {sortKey === 'version' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
             </th>
-            <th onClick={() => handleSort('createdAt')} className="cursor-pointer">
+            <th
+              onClick={() => handleSort('createdAt')}
+              className="cursor-pointer p-2"
+            >
               Date {sortKey === 'createdAt' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
             </th>
-            <th>Actions</th>
+            <th className="p-2">Actions</th>
           </tr>
         </thead>
         <tbody>
           {sorted.map(snap => (
-            <tr key={snap.id} className="hover:bg-gray-100">
-              <td>
+            <tr
+              key={snap.id}
+              className="hover:bg-gray-100 border-b border-gray-200"
+            >
+              <td className="p-2 text-center">
                 <input
                   type="checkbox"
                   checked={selected.has(snap.id)}
                   onChange={() => toggleSelect(snap.id)}
                 />
               </td>
-              <td>{snap.name}</td>
-              <td>{snap.version || 'unknown'}</td>
-              <td>{new Date(snap.createdAt).toLocaleString()}</td>
-              <td className="flex gap-1">
-                <Button variant="outline" size="sm" onClick={() => handleRestore(snap)}>
-                  Restore
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleDownload(snap)}>
-                  Download
-                </Button>
-                <Button variant="destructive" size="sm" onClick={() => handleDelete(snap)}>
-                  Delete
-                </Button>
+              <td className="p-2">{snap.name}</td>
+              <td className="p-2">{snap.version || 'unknown'}</td>
+              <td className="p-2">{new Date(snap.createdAt).toLocaleString()}</td>
+              <td className="p-2">
+                <div className="flex gap-1">
+                  <Button variant="outline" size="sm" onClick={() => handleRestore(snap)}>
+                    Restore
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleDownload(snap)}>
+                    Download
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => handleDelete(snap)}>
+                    Delete
+                  </Button>
+                </div>
               </td>
             </tr>
           ))}

@@ -4,8 +4,8 @@
 @layer base {
   :root {
     --colors-primary: #003660;   /* UCSB Blue (Main Accent) */
-    --colors-secondary: #1178b5;   /* PaCE Blue (Secondary Accent) */
-    --colors-accent: #febc11;      /* UCSB Gold (Contrasting Accent) */
+    --colors-secondary: #1178b5; /* PaCE Blue (Secondary Accent) */
+    --colors-accent: #febc11;    /* UCSB Gold (Contrasting Accent) */
   }
   .bg-primary {
     background-color: var(--colors-primary);

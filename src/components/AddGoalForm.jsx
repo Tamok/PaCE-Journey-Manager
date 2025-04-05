@@ -1,8 +1,8 @@
-// src/components/AddJourneyForm.jsx
+// src/components/AddGoalForm.jsx
 import React, { useState } from 'react';
 import '../styles/journeyDetails.css';
 
-const AddJourneyForm = ({ onAddJourney, role }) => {
+const AddGoalForm = ({ onAddGoal, role }) => {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState('Critical');
@@ -15,7 +15,7 @@ const AddJourneyForm = ({ onAddJourney, role }) => {
       alert('Title is required.');
       return;
     }
-    const newJourney = {
+    const newGoal = {
       id: Date.now().toString(),
       title,
       priority,
@@ -23,10 +23,9 @@ const AddJourneyForm = ({ onAddJourney, role }) => {
       note,
       scheduledStartDate: new Date().toISOString().slice(0, 10),
       completedDate: null,
-      subJourneys: []
+      subGoals: []
     };
-    onAddJourney(newJourney);
-    // Reset form
+    onAddGoal(newGoal);
     setTitle('');
     setPriority('Critical');
     setDifficulty('Easy');
@@ -34,12 +33,12 @@ const AddJourneyForm = ({ onAddJourney, role }) => {
     setShowForm(false);
   };
 
-  if (role !== 'admin') return null; // Only admins can add journeys
+  if (role !== 'admin') return null;
 
   return (
     <div className="add-journey-form">
       <button className="btn" onClick={() => setShowForm(!showForm)}>
-        {showForm ? 'Cancel' : 'Add Journey'}
+        {showForm ? 'Cancel' : 'Add Goal'}
       </button>
       {showForm && (
         <form onSubmit={handleSubmit}>
@@ -49,7 +48,7 @@ const AddJourneyForm = ({ onAddJourney, role }) => {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Journey Title"
+              placeholder="Goal Title"
               required
             />
           </label>
@@ -79,11 +78,11 @@ const AddJourneyForm = ({ onAddJourney, role }) => {
               placeholder="Optional note"
             />
           </label>
-          <button type="submit" className="btn">Save Journey</button>
+          <button type="submit" className="btn">Save Goal</button>
         </form>
       )}
     </div>
   );
 };
 
-export default AddJourneyForm;
+export default AddGoalForm;

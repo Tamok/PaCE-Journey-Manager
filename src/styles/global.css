@@ -8,16 +8,22 @@
 
 body {
   font-family: 'Nunito Sans', sans-serif;
-  background: #f9fafb;
-  color: #333;
+  background: #ffffff; /* white background */
+  color: #003660; /* UCSB blue for text */
   padding: 20px;
 }
+
+/* Accent colors */
+.accent-red { color: #c53030; }
+.accent-green { color: #38a169; }
+.accent-gold { color: #febc11; }
 
 .app-container {
   max-width: 1200px;
   margin: 0 auto;
 }
 
+/* Updated buttons */
 .btn {
   background: #003660;
   color: #fff;
@@ -36,8 +42,30 @@ body {
 .btn-cancel {
   background: #ccc;
   color: #333;
+  border: none;
+  padding: 10px 16px;
+  margin: 5px;
+  cursor: pointer;
+  border-radius: 5px;
 }
 
 .btn-cancel:hover {
   background: #aaa;
+}
+
+/* Slick scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #003660;
+  border-radius: 4px;
+  border: 2px solid #f0f0f0;
 }
