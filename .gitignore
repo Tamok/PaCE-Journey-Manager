@@ -13,6 +13,13 @@ dist/
 build/
 archive/
 
+# Testing artifacts
+coverage/
+*.lcov
+test-results/
+playwright-report/
+/tmp/playwright-mcp-output/
+
 # OS files
 .DS_Store
 Thumbs.db
